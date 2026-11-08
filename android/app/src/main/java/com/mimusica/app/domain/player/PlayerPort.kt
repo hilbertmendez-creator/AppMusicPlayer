@@ -12,6 +12,8 @@ data class PlaybackState(
     val hasPrevious: Boolean = false,
     /** Title of the next item in the queue, or null when this is the last one. */
     val nextTitle: String? = null,
+    /** System music volume on the 0..[VOLUME_STEPS] scale shown to the user; null while it is not known yet. */
+    val volumeLevel: Int? = null,
 )
 
 /** What the UI needs from the audio player. Implemented over Media3 by `PlayerController`. */

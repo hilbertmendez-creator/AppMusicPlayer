@@ -3,6 +3,7 @@ package com.mimusica.app.ui
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -50,14 +51,18 @@ class TextSizeScreenTest {
     }
 
     @Test
-    fun caregiverEntryIsASeparateButton() {
+    fun caregiverEntryIsAQuietLinkWithANoteAtTheBottom() {
         var clicked = false
         compose.setContent {
             MiMusicaTheme {
                 TextSizeScreen(current = TextScale.NORMAL, onSelect = {}, onCaregiver = { clicked = true }, onBack = {})
             }
         }
-        compose.onNodeWithText("Para quien ayuda").assertHeightIsAtLeast(64.dp).performClick()
+        compose.onNodeWithText("Solo para quien configuró la app").assertExists()
+        val link = compose.onNodeWithText("Para quien ayuda").assertHeightIsAtLeast(64.dp)
+        val lastSize = compose.onNodeWithText("Muy grande").getUnclippedBoundsInRoot()
+        assertTrue("the link must come after the text sizes", link.getUnclippedBoundsInRoot().top >= lastSize.bottom)
+        link.performClick()
         assertTrue(clicked)
     }
 
@@ -69,7 +74,7 @@ class TextSizeScreenTest {
             }
         }
         compose.onNodeWithText("Esta parte es para quien te ayuda con la app.").assertIsDisplayed()
-        compose.onNodeWithText("¿No sabes el número? Pregúntale a quien configuró la app.").assertIsDisplayed()
-        compose.onNodeWithText("Ese número no es correcto. Prueba otra vez.").assertIsDisplayed()
+        compose.onNodeWithText("¿No sabes el PIN? Pregúntale a quien configuró la app.").assertIsDisplayed()
+        compose.onNodeWithText("Ese PIN no es correcto. Prueba otra vez.").assertIsDisplayed()
     }
 }

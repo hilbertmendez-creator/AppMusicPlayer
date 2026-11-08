@@ -1,6 +1,7 @@
 package com.mimusica.app.ui
 
 import androidx.compose.ui.graphics.Color
+import com.mimusica.app.ui.components.SectionAccents
 import com.mimusica.app.ui.theme.AmberBrown
 import com.mimusica.app.ui.theme.Card
 import com.mimusica.app.ui.theme.DeepBlue
@@ -82,6 +83,15 @@ class PaletteContrastTest {
     private fun assertNonText(name: String, a: Color, b: Color) {
         val r = ratio(a, b)
         assertTrue("$name is only ${"%.2f".format(r)}:1", r >= 3.0)
+    }
+
+    @Test
+    fun `section accents are visible on paper as non text elements`() {
+        SectionAccents.all.forEach { assertNonText("${it.color} on Paper", it.color, Paper) }
+        assertEquals(DeepBlue, SectionAccents.Songs.color)
+        assertEquals(Plum, SectionAccents.Playlists.color)
+        assertEquals(DeepTeal, SectionAccents.Search.color)
+        assertEquals(AmberBrown, SectionAccents.Sing.color)
     }
 
     @Test

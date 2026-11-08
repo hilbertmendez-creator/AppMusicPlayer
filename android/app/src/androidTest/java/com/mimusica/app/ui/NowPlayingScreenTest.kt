@@ -35,14 +35,14 @@ class NowPlayingScreenTest {
         isPlaying = true, positionMs = 65_000, durationMs = 220_000, hasNext = true, hasPrevious = true,
     )
 
-    /** 1080x2220 @ 440dpi is about 392x807dp. */
+    /** The target phone, a Pixel 7a: 1080x2400 at 2.625 density is about 411x914dp. Narrower phones fall back to full-width rows. */
     private fun show(scale: TextScale, state: PlaybackState = playing) {
         compose.setContent {
             MiMusicaTheme(textScale = scale) {
-                Box(Modifier.size(392.dp, 807.dp)) {
+                Box(Modifier.size(411.dp, 914.dp)) {
                     NowPlayingScreen(
                         state = state, onToggle = {}, onNext = {}, onPrevious = {},
-                        onVolumeUp = {}, onVolumeDown = {}, onSing = {}, onBack = {},
+                        onVolumeUp = {}, onVolumeDown = {}, onRestart = {}, onSing = {}, onBack = {},
                     )
                 }
             }
@@ -89,15 +89,15 @@ class NowPlayingScreenTest {
     }
 
     @Test
-    fun transportKeysAreEqualCards() {
+    fun transportKeysAreEqualHeightCardsAndPlayPauseIsTheWidestOne() {
         show(TextScale.NORMAL)
         val bounds = listOf("Anterior", "Pausar", "Siguiente").map {
             compose.onNodeWithText(it).getUnclippedBoundsInRoot()
         }
         val widths = bounds.map { (it.right - it.left).value }
         val heights = bounds.map { (it.bottom - it.top).value }
-        assertEquals(widths[0], widths[1], 0.5f)
         assertEquals(widths[0], widths[2], 0.5f)
+        assert(widths[1] > widths[0]) { "play/pause should be wider than previous/next: $widths" }
         assertEquals(heights[0], heights[1], 0.5f)
         assertEquals(heights[0], heights[2], 0.5f)
         assert(heights[0] >= 112f) { "transport keys must be at least 112dp tall, were ${heights[0]}" }
@@ -149,5 +149,22 @@ class NowPlayingScreenTest {
     fun singFitsAtNormalSizeWithTheNextLine() {
         show(TextScale.NORMAL, playing.copy(nextTitle = "Cielito lindo"))
         compose.onNodeWithText("Cantar").assertIsDisplayed()
+    }
+
+    @Test
+    fun withoutLyricsSaysSoInsteadOfOfferingSing() {
+        val noLyrics = playing.copy(
+            currentSong = playing.currentSong!!.copy(hasSyncedLyrics = false, hasPlainLyrics = false),
+        )
+        show(TextScale.NORMAL, noLyrics)
+        compose.onNodeWithText("Esta canción no tiene letra todavía.").performScrollTo().assertIsDisplayed()
+        compose.onAllNodesWithText("Cantar").assertCountEquals(0)
+    }
+
+    @Test
+    fun withLyricsOffersSingAndNoExplanation() {
+        show(TextScale.NORMAL)
+        compose.onNodeWithText("Cantar").assertIsDisplayed()
+        compose.onAllNodesWithText("Esta canción no tiene letra todavía.").assertCountEquals(0)
     }
 }

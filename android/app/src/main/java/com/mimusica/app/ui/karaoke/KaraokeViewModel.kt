@@ -22,6 +22,8 @@ data class KaraokeUiState(
     val plain: String? = null,
     val currentIndex: Int = -1,
     val isPlaying: Boolean = false,
+    /** Playback position as a 0..1 fraction of the song; drives the auto-scroll of plain lyrics. */
+    val progress: Float = 0f,
 )
 
 class KaraokeViewModel(
@@ -43,6 +45,7 @@ class KaraokeViewModel(
                 _uiState.update {
                     it.copy(
                         isPlaying = playback.isPlaying,
+                        progress = playbackFraction(playback.positionMs, playback.durationMs),
                         currentIndex = if (it.mode == KaraokeMode.SYNCED) {
                             timeline.currentIndex(playback.positionMs, totalOffsetMs)
                         } else {
@@ -55,6 +58,9 @@ class KaraokeViewModel(
     }
 
     fun togglePlayPause() = player.togglePlayPause()
+
+    /** "Empezar de nuevo": back to the first second, keeping whatever play/pause state the song is in. */
+    fun restart() = player.seekTo(0L)
 
     private suspend fun load() {
         val song = library.getSong(songId)

@@ -94,6 +94,34 @@ class KaraokeViewModelTest {
     }
 
     @Test
+    fun `progress follows the playback fraction`() = runTest {
+        seed("a", null, "la la la")
+        val vm = KaraokeViewModel("a", library, player)
+        advanceUntilIdle()
+        assertEquals(0f, vm.uiState.value.progress, 0f)
+
+        player.setDuration(200_000)
+        player.setPosition(50_000)
+        advanceUntilIdle()
+
+        assertEquals(0.25f, vm.uiState.value.progress, 0.0001f)
+    }
+
+    @Test
+    fun `restart seeks to the beginning`() = runTest {
+        seed("a", lrc, null)
+        val vm = KaraokeViewModel("a", library, player)
+        advanceUntilIdle()
+        player.setPosition(7_000)
+
+        vm.restart()
+        advanceUntilIdle()
+
+        assertEquals(listOf(0L), player.seeks)
+        assertEquals(-1, vm.uiState.value.currentIndex)
+    }
+
+    @Test
     fun `no lyrics shows friendly empty mode`() = runTest {
         seed("a", null, null)
         val vm = KaraokeViewModel("a", library, player)

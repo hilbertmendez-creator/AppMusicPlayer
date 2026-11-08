@@ -2,6 +2,8 @@ package com.mimusica.app.ui.search
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -17,7 +19,6 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -26,15 +27,16 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.shape.RoundedCornerShape
 import com.mimusica.app.R
 import com.mimusica.app.domain.model.DownloadState
 import com.mimusica.app.domain.model.MatchType
@@ -52,7 +54,9 @@ import com.mimusica.app.ui.components.MessageBanner
 import com.mimusica.app.ui.components.MinTouch
 import com.mimusica.app.ui.components.RowCard
 import com.mimusica.app.ui.components.ScreenScaffold
+import com.mimusica.app.ui.components.SectionAccents
 import com.mimusica.app.ui.components.StatusPill
+import com.mimusica.app.ui.components.TagChip
 
 /** Presentational "Buscar": one big field, a very large microphone button and at most 5 result cards. */
 @Composable
@@ -76,7 +80,12 @@ fun SearchScreen(
         focusManager.clearFocus()
         onSearch()
     }
-    ScreenScaffold(title = stringResource(R.string.search_title), onBack = onBack, modifier = modifier) {
+    ScreenScaffold(
+        title = stringResource(R.string.search_title),
+        onBack = onBack,
+        modifier = modifier,
+        accent = SectionAccents.Search,
+    ) {
         OutlinedTextField(
             value = state.query,
             onValueChange = { text ->
@@ -88,6 +97,7 @@ fun SearchScreen(
                 .fillMaxWidth()
                 .heightIn(min = 72.dp),
             textStyle = MaterialTheme.typography.titleMedium,
+            label = { Text(stringResource(R.string.search_label), style = MaterialTheme.typography.bodyLarge) },
             placeholder = { Text(stringResource(R.string.search_hint), style = MaterialTheme.typography.bodyLarge) },
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             keyboardActions = KeyboardActions(onSearch = { submit() }),
@@ -113,7 +123,7 @@ fun SearchScreen(
         when {
             state.isSearching -> SearchingIndicator()
             state.hasSearched && state.items.isEmpty() && state.error == null ->
-                EmptyMessage(stringResource(R.string.search_no_results))
+                EmptyMessage(stringResource(R.string.search_no_results), live = true)
         }
         state.items.forEach { item ->
             ResultCard(
@@ -128,17 +138,21 @@ fun SearchScreen(
 
 @Composable
 private fun SearchingIndicator() {
+    // One focus stop, announced politely: the spinner is decoration, "Buscando…" is what TalkBack reads.
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(LiveStatus),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        CircularProgressIndicator(modifier = Modifier.size(40.dp))
+        CircularProgressIndicator(modifier = Modifier.size(40.dp).clearAndSetSemantics {})
         Spacer(Modifier.width(16.dp))
         Text(stringResource(R.string.search_searching), style = MaterialTheme.typography.titleMedium)
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ResultCard(
     item: SearchItem,
@@ -154,29 +168,39 @@ fun ResultCard(
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Artwork(url = item.result.thumbnailUrl, size = 80.dp)
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(item.result.title, style = MaterialTheme.typography.titleMedium, maxLines = 3)
-                Text(item.result.artist, style = MaterialTheme.typography.bodyLarge, maxLines = 2)
+            // Same compact identity block as "Mis canciones": 72dp cover, title, artist, duration.
+            Artwork(url = item.result.thumbnailUrl, size = 72.dp, decorative = true)
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    item.result.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    item.result.artist,
+                    style = MaterialTheme.typography.bodyLarge,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
                 item.result.durationSeconds?.let {
                     Text(formatDuration(it * 1000L), style = MaterialTheme.typography.bodyLarge)
                 }
-                if (item.result.match == MatchType.LYRICS) {
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = MaterialTheme.colorScheme.primaryContainer,
+                val byLyrics = item.result.match == MatchType.LYRICS
+                val instrumental = isInstrumental(item.result.title)
+                if (byLyrics || instrumental) {
+                    FlowRow(
+                        modifier = Modifier.padding(top = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
-                        Text(
-                            stringResource(R.string.search_tag_lyrics),
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        )
+                        if (byLyrics) TagChip(stringResource(R.string.search_tag_lyrics))
+                        if (instrumental) TagChip(stringResource(R.string.search_tag_instrumental))
                     }
                 }
             }
         }
-        DownloadAction(item, onDownload, onPlayNow, onAddToList)
+        DownloadAction(item, item.result.title, onDownload, onPlayNow, onAddToList)
     }
 }
 
@@ -186,19 +210,26 @@ private val LiveStatus = Modifier.semantics(mergeDescendants = true) { liveRegio
 @Composable
 private fun DownloadAction(
     item: SearchItem,
+    title: String,
     onDownload: () -> Unit,
     onPlayNow: (Song) -> Unit,
     onAddToList: (Song) -> Unit,
 ) {
     when (item.state) {
         DownloadState.NotDownloaded ->
-            BigButton(stringResource(R.string.download), onDownload, icon = Icons.Filled.Download)
+            BigButton(
+                stringResource(R.string.download),
+                onDownload,
+                icon = Icons.Filled.Download,
+                description = stringResource(R.string.download_song_desc, title),
+            )
         DownloadState.Failed -> {
             InlineError(item.failure?.let { errorText(it) } ?: stringResource(R.string.download_failed))
             BigButton(
                 stringResource(R.string.download_retry),
                 onDownload,
                 icon = Icons.Filled.Download,
+                description = stringResource(R.string.download_retry_song_desc, title),
                 containerColor = MaterialTheme.colorScheme.error,
                 contentColor = MaterialTheme.colorScheme.onError,
             )
@@ -213,6 +244,7 @@ private fun DownloadAction(
                     { onPlayNow(song) },
                     icon = Icons.Filled.PlayArrow,
                     minHeight = MinTouch,
+                    description = stringResource(R.string.play_now_song_desc, title),
                 )
                 OutlineBigButton(
                     stringResource(R.string.add_to_list),
@@ -220,6 +252,7 @@ private fun DownloadAction(
                     icon = Icons.Filled.PlaylistAdd,
                     minHeight = MinTouch,
                     color = MaterialTheme.colorScheme.primary,
+                    description = stringResource(R.string.add_to_list_song_desc, title),
                 )
             }
         }
@@ -236,7 +269,7 @@ private fun ProgressStatus(text: String) {
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        CircularProgressIndicator(modifier = Modifier.size(36.dp))
+        CircularProgressIndicator(modifier = Modifier.size(36.dp).clearAndSetSemantics {})
         Spacer(Modifier.width(16.dp))
         Text(text, style = MaterialTheme.typography.labelLarge)
     }

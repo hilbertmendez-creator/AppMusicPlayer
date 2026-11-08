@@ -66,6 +66,55 @@ def test_lrclib_returns_none_when_nothing_found():
     assert lrclib(handler).get("Song", "Artist", 200) is None
 
 
+def _title_only_handler(candidates):
+    """/api/get 404; artist+title search empty; title-only search returns `candidates`."""
+    seen = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/api/get":
+            return httpx.Response(404, json={})
+        seen.append(dict(request.url.params))
+        if "artist_name" in request.url.params:
+            return httpx.Response(200, json=[])
+        return httpx.Response(200, json=candidates)
+
+    return handler, seen
+
+
+def test_lrclib_title_only_fallback_returns_plain_lyrics_without_synced():
+    handler, seen = _title_only_handler(
+        [
+            {"duration": 230, "syncedLyrics": "[00:01.00]otra", "plainLyrics": "letra otra"},
+            {"duration": 100, "syncedLyrics": None, "plainLyrics": "lejos"},
+        ]
+    )
+    out = lrclib(handler).get("Cielito Lindo", "Mariachi Mexico Joven", 243)
+    assert out is not None
+    assert out.synced_lrc is None  # another recording's timestamps would not match
+    assert out.plain == "letra otra"
+    assert seen[-1] == {"track_name": "Cielito Lindo"}
+
+
+def test_lrclib_title_only_fallback_rejects_large_duration_drift():
+    handler, _ = _title_only_handler([{"duration": 400, "syncedLyrics": None, "plainLyrics": "x"}])
+    assert lrclib(handler).get("Cielito Lindo", "Nadie", 243) is None
+
+
+def test_lrclib_title_only_fallback_needs_known_duration():
+    handler, _ = _title_only_handler([{"duration": 230, "syncedLyrics": None, "plainLyrics": "x"}])
+    assert lrclib(handler).get("Cielito Lindo", "Nadie", None) is None
+
+
+def test_lrclib_title_only_fallback_strips_timestamps_from_synced_only_candidate():
+    synced = "[00:01.00]uno\n[00:05.50] dos\n[00:09.00]"
+    candidate = {"duration": 240, "syncedLyrics": synced, "plainLyrics": None}
+    handler, _ = _title_only_handler([candidate])
+    out = lrclib(handler).get("Cielito Lindo", "Nadie", 243)
+    assert out is not None
+    assert out.synced_lrc is None
+    assert out.plain == "uno\ndos"
+
+
 def test_lrclib_instrumental_or_empty_lyrics_is_none():
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, json={"syncedLyrics": None, "plainLyrics": None})

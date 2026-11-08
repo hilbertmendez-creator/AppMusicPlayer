@@ -7,9 +7,19 @@
     <string name="home_playlists">Mis listas</string>
     <string name="home_search">Buscar</string>
     <string name="home_sing">Cantar</string>
-    <string name="home_text_size">Tamaño de letra</string>
     <string name="mini_player_now">Sonando ahora</string>
     <string name="mini_player_open">Abrir el reproductor</string>
+    <string name="home_text_size_pill">Aa</string>
+    <string name="home_text_size_desc">Aa, Tamaño de letra</string>
+    <string name="home_songs_none">Todavía no tienes canciones</string>
+    <plurals name="home_playlists_count">
+        <item quantity="one">%d lista</item>
+        <item quantity="other">%d listas</item>
+    </plurals>
+    <string name="home_playlists_none">Ninguna lista todavía</string>
+    <string name="home_search_subtitle">Di o escribe una canción</string>
+    <string name="home_sing_count">%d con letra</string>
+    <string name="home_sing_none">Todavía ninguna con letra</string>
 
     <!-- Comunes -->
     <string name="back">Volver</string>
@@ -18,18 +28,19 @@
     <string name="next">Siguiente</string>
     <string name="previous">Anterior</string>
     <string name="volume">Volumen</string>
+    <string name="volume_level">Volumen %1$d&#160;de&#160;%2$d</string>
+    <string name="volume_state">%1$d de %2$d</string>
     <string name="volume_up">Subir el volumen</string>
     <string name="volume_down">Bajar el volumen</string>
     <string name="delete">Borrar</string>
     <string name="yes_delete">Sí, borrar</string>
-    <string name="no">No</string>
+    <string name="keep_it">No, conservarla</string>
     <string name="cancel">Cancelar</string>
     <string name="create">Crear</string>
     <string name="save">Guardar</string>
     <string name="saved">Guardado</string>
     <string name="sing">Cantar</string>
     <string name="cover_art">Portada de la canción</string>
-    <string name="selected_check">Elegida</string>
     <plurals name="song_count">
         <item quantity="one">%d canción</item>
         <item quantity="other">%d canciones</item>
@@ -44,14 +55,23 @@
     <!-- Buscar -->
     <string name="search_title">Buscar</string>
     <string name="search_hint">Escribe o di el nombre, el cantante o un pedacito de la letra</string>
+    <string name="search_label">Canción, cantante o letra</string>
     <string name="search_button">Buscar</string>
     <string name="search_mic">Hablar</string>
     <string name="search_mic_desc">Hablar para buscar una canción</string>
     <string name="search_searching">Buscando…</string>
     <string name="search_no_results">No encontré nada. Prueba con otras palabras.</string>
     <string name="search_tag_lyrics">Encontrada por la letra</string>
+    <string name="search_tag_instrumental">Instrumental</string>
     <string name="mic_unavailable">El micrófono no está disponible. Escribe lo que buscas.</string>
     <string name="mic_prompt">Di el nombre de la canción o del cantante</string>
+    <!-- TalkBack: the spoken name starts with the visible label and then says which song it acts on. -->
+    <string name="download_song_desc">Descargar %1$s</string>
+    <string name="download_retry_song_desc">Intentar otra vez con %1$s</string>
+    <string name="play_now_song_desc">Reproducir ahora %1$s</string>
+    <string name="add_to_list_song_desc">Agregar a una lista: %1$s</string>
+    <string name="sing_song_desc">Cantar %1$s</string>
+    <string name="delete_song_desc">Borrar %1$s</string>
     <string name="download">Descargar</string>
     <string name="downloading">Descargando… puedes seguir, se guarda sola</string>
     <string name="download_saving">Guardando en tu teléfono…</string>
@@ -67,16 +87,18 @@
     <string name="songs_empty_action">Buscar canciones</string>
     <string name="song_play_desc">Reproducir %1$s</string>
     <string name="delete_song_confirm">¿Quieres borrar “%1$s”?</string>
+    <string name="delete_song_note">Podrás volver a descargarla desde Buscar.</string>
+    <string name="song_deleted">Se borró «%1$s».</string>
 
     <!-- Mis listas -->
     <string name="playlists_title">Mis listas</string>
     <string name="playlists_empty">Todavía no tienes listas. Crea la primera.</string>
     <string name="new_playlist">Nueva lista</string>
     <string name="playlist_name_hint">Nombre de la lista</string>
-    <string name="playlist_mic_desc">Decir el nombre de la lista</string>
     <string name="play_all">Reproducir todo</string>
     <string name="add_songs">Agregar canciones</string>
     <string name="remove">Quitar</string>
+    <string name="remove_song_desc">Quitar %1$s</string>
     <string name="remove_song_confirm">¿Quieres quitar “%1$s” de esta lista?</string>
     <string name="delete_playlist">Borrar lista</string>
     <string name="delete_playlist_confirm">¿Quieres borrar la lista “%1$s”?</string>
@@ -92,14 +114,22 @@
 
     <!-- Cantar / Karaoke / Reproduciendo -->
     <string name="sing_title">Cantar</string>
-    <string name="sing_empty">Todavía no hay canciones con letra.</string>
+    <string name="sing_empty">Todavía no hay canciones con letra. Cuando descargas una canción, buscamos su letra.</string>
+    <string name="sing_empty_action">Buscar canciones</string>
+    <string name="now_playing_no_lyrics">Esta canción no tiene letra todavía.</string>
     <string name="now_playing_title">Reproduciendo</string>
     <string name="now_playing_progress">Avance de la canción</string>
+    <string name="now_playing_restart">Desde el principio</string>
     <string name="now_playing_progress_spoken">%1$s de %2$s</string>
     <string name="up_next">Sigue: %1$s</string>
     <string name="nothing_playing">No hay nada sonando.</string>
     <string name="karaoke_no_lyrics">Esta canción todavía no tiene letra</string>
     <string name="karaoke_loading">Cargando letra…</string>
+    <string name="karaoke_plain_notice">La letra no avanza sola. Léela a tu ritmo.</string>
+    <string name="karaoke_restart">Empezar de nuevo</string>
+    <string name="karaoke_title_artist">%1$s · %2$s</string>
+    <string name="karaoke_rest_mark">♪</string>
+    <string name="tag_full_lyrics">Letra completa</string>
 
     <!-- Ajustes -->
     <string name="setup_title">Configuración inicial</string>
@@ -113,16 +143,18 @@
     <string name="setup_error_pin">El PIN debe tener 4 números.</string>
     <string name="pin_title">Para quien ayuda</string>
     <string name="pin_intro">Esta parte es para quien te ayuda con la app.</string>
-    <string name="pin_help">¿No sabes el número? Pregúntale a quien configuró la app.</string>
-    <string name="pin_prompt">Escribe el número secreto</string>
+    <string name="pin_help">¿No sabes el PIN? Pregúntale a quien configuró la app.</string>
+    <string name="pin_prompt">Escribe el PIN</string>
     <string name="pin_enter">Entrar</string>
-    <string name="pin_wrong">Ese número no es correcto. Prueba otra vez.</string>
+    <string name="pin_wrong">Ese PIN no es correcto. Prueba otra vez.</string>
     <string name="settings_title">Para quien ayuda</string>
     <string name="change_pin">Cambiar PIN</string>
     <string name="text_size_title">Tamaño de letra</string>
     <string name="text_size_intro">Toca la letra que se ve mejor para ti.</string>
     <string name="text_size_preview">Así se verá la letra.</string>
+    <string name="text_size_chosen">Tamaño elegido: %1$s</string>
     <string name="caregiver_entry">Para quien ayuda</string>
+    <string name="caregiver_note">Solo para quien configuró la app</string>
     <string name="text_normal">Normal</string>
     <string name="text_large">Grande</string>
     <string name="text_xlarge">Muy grande</string>

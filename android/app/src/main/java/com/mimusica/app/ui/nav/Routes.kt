@@ -1,9 +1,11 @@
 package com.mimusica.app.ui.nav
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -13,7 +15,9 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.mimusica.app.LocalAppContainer
 import com.mimusica.app.ui.home.HomeScreen
+import com.mimusica.app.ui.home.HomeSummary
 import com.mimusica.app.ui.home.MiniPlayerUi
+import com.mimusica.app.ui.home.homeSummary
 import com.mimusica.app.ui.karaoke.KaraokeScreen
 import com.mimusica.app.ui.karaoke.KaraokeViewModel
 import com.mimusica.app.ui.player.NowPlayingScreen
@@ -34,6 +38,9 @@ import com.mimusica.app.ui.sing.SingScreen
 import com.mimusica.app.ui.components.rememberSpeechInput
 import com.mimusica.app.ui.songs.SongsScreen
 import com.mimusica.app.ui.songs.SongsViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.withContext
 
 @Composable
 fun SetupRoute(vm: SettingsViewModel, onDone: () -> Unit) {
@@ -53,11 +60,19 @@ fun HomeRoute(
     onSettings: () -> Unit,
     onOpenPlayer: () -> Unit,
 ) {
-    val player = LocalAppContainer.current.player
+    val container = LocalAppContainer.current
+    val player = container.player
     val playback by player.state.collectAsStateWithLifecycle()
-    val mini = playback.currentSong?.let { MiniPlayerUi(it.title, it.artist, playback.isPlaying) }
+    val mini = playback.currentSong?.let { MiniPlayerUi(it.title, it.artist, playback.isPlaying, it.thumbnailUrl) }
+    // The library is resolved off the main thread (it may still be warming up), so Home's first frame never
+    // waits for Room. Until the first counts arrive the tiles simply show no subtitle.
+    val summary by produceState<HomeSummary?>(initialValue = null, container) {
+        val library = withContext(Dispatchers.Default) { container.library }
+        combine(library.observeDownloadedSongs(), library.observePlaylists(), ::homeSummary).collect { value = it }
+    }
     HomeScreen(
         miniPlayer = mini,
+        summary = summary,
         onSongs = onSongs,
         onPlaylists = onPlaylists,
         onSearch = onSearch,
@@ -145,20 +160,25 @@ fun AddToListRoute(songId: String, vm: PlaylistsViewModel, onBack: () -> Unit) {
 fun SongsRoute(
     vm: SongsViewModel,
     onBack: () -> Unit,
-    onSing: (String) -> Unit,
     onSearch: () -> Unit,
     onPlayerOpen: () -> Unit,
 ) {
     val state by vm.uiState.collectAsStateWithLifecycle()
     val player = LocalAppContainer.current.player
+    // The ViewModel is shared by the whole activity: forget "Se borró «…»." when leaving this screen.
+    DisposableEffect(vm) { onDispose { vm.clearNotice() } }
     SongsScreen(
         songs = state.songs,
         error = state.error,
+        deletedTitle = state.deletedTitle,
         onPlay = { index ->
             player.play(state.songs, index)
             onPlayerOpen()
         },
-        onSing = { onSing(it.id) },
+        onPlayAll = { songs ->
+            player.play(songs, 0)
+            onPlayerOpen()
+        },
         onDelete = vm::delete,
         onSearch = onSearch,
         onBack = onBack,
@@ -166,9 +186,9 @@ fun SongsRoute(
 }
 
 @Composable
-fun SingRoute(vm: SongsViewModel, onBack: () -> Unit, onSing: (String) -> Unit) {
+fun SingRoute(vm: SongsViewModel, onBack: () -> Unit, onSing: (String) -> Unit, onSearch: () -> Unit) {
     val state by vm.uiState.collectAsStateWithLifecycle()
-    SingScreen(songs = state.singable, onSing = { onSing(it.id) }, onBack = onBack)
+    SingScreen(songs = state.singable, onSing = { onSing(it.id) }, onSearch = onSearch, onBack = onBack)
 }
 
 @Composable
@@ -274,6 +294,7 @@ fun NowPlayingRoute(onBack: () -> Unit, onSing: (String) -> Unit) {
         onPrevious = player::previous,
         onVolumeUp = player::volumeUp,
         onVolumeDown = player::volumeDown,
+        onRestart = { player.seekTo(0L) },
         onSing = onSing,
         onBack = onBack,
     )
@@ -290,7 +311,13 @@ fun KaraokeRoute(songId: String, onBack: () -> Unit) {
     val settings by container.settingsStore.settings.collectAsStateWithLifecycle(
         initialValue = com.mimusica.app.data.settings.AppSettings(),
     )
-    KaraokeScreen(state = state, textScale = settings.textScale.factor, onToggle = vm::togglePlayPause, onBack = onBack)
+    KaraokeScreen(
+        state = state,
+        textScale = settings.textScale.factor,
+        onToggle = vm::togglePlayPause,
+        onRestart = vm::restart,
+        onBack = onBack,
+    )
 }
 
 @Composable

@@ -97,14 +97,18 @@ fun AppNav() {
             SongsRoute(
                 songsVm(),
                 onBack = nav::popBackStack,
-                onSing = { nav.navigate(Routes.karaoke(it)) },
                 onSearch = { nav.navigate(Routes.SEARCH) },
             ) {
                 nav.navigate(Routes.NOW_PLAYING)
             }
         }
         composable(Routes.SING) {
-            SingRoute(songsVm(), onBack = nav::popBackStack, onSing = { nav.navigate(Routes.karaoke(it)) })
+            SingRoute(
+                songsVm(),
+                onBack = nav::popBackStack,
+                onSing = { nav.navigate(Routes.karaoke(it)) },
+                onSearch = { nav.navigate(Routes.SEARCH) },
+            )
         }
         composable(Routes.PLAYLISTS) {
             PlaylistsRoute(playlistsVm(), onBack = nav::popBackStack, onOpen = { nav.navigate(Routes.playlist(it)) })

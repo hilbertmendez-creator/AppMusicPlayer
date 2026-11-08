@@ -4,9 +4,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.sp
 import com.mimusica.app.data.settings.TextScale
 
@@ -96,11 +100,39 @@ fun scaledTypography(scale: Float): Typography {
     )
 }
 
+/** Largest combined text scale (in-app "Tamaño de letra" x the phone's font size) any screen is asked to handle. */
+const val MaxCombinedTextScale = 1.6f
+
+/**
+ * The OS font scale to hand to [LocalDensity] so that in-app [appFactor] x it never exceeds
+ * [MaxCombinedTextScale]. It only ever lowers the OS value, so the in-app choice survives whenever the product
+ * is already within the cap (e.g. app 1.4 at OS 1.0 stays 1.4).
+ */
+fun cappedOsFontScale(appFactor: Float, osFontScale: Float): Float =
+    osFontScale.coerceAtMost(MaxCombinedTextScale / appFactor.coerceAtLeast(0.01f))
+
+/** The text scale a user actually gets: in-app factor x capped OS font scale. */
+fun effectiveTextScale(appFactor: Float, osFontScale: Float): Float =
+    appFactor * cappedOsFontScale(appFactor, osFontScale)
+
+/**
+ * The phone's own font size as the system reports it, before [MiMusicaTheme] caps it for [LocalDensity].
+ * Previews of other text sizes (the "Tamaño de letra" rows) need it to apply the same cap to their own factor.
+ */
+val LocalOsFontScale = staticCompositionLocalOf { 1f }
+
 @Composable
 fun MiMusicaTheme(textScale: TextScale = TextScale.NORMAL, content: @Composable () -> Unit) {
-    MaterialTheme(
-        colorScheme = WarmColors,
-        typography = scaledTypography(textScale.factor),
-        content = content,
-    )
+    // The typography already multiplies sp by the in-app factor, and the OS font scale multiplies it again at
+    // draw time. Capping the OS part keeps the worst case (1.4 x 1.82) from breaking every layout.
+    val density = LocalDensity.current
+    val osScale = cappedOsFontScale(textScale.factor, density.fontScale)
+    val cappedDensity = if (osScale == density.fontScale) density else Density(density.density, osScale)
+    CompositionLocalProvider(LocalDensity provides cappedDensity, LocalOsFontScale provides density.fontScale) {
+        MaterialTheme(
+            colorScheme = WarmColors,
+            typography = scaledTypography(textScale.factor),
+            content = content,
+        )
+    }
 }

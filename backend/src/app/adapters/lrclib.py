@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 import httpx
 
 from app.domain.models import Lyrics
@@ -16,6 +18,15 @@ def _to_lyrics(item: dict) -> Lyrics | None:
     if synced is None and plain is None:
         return None
     return Lyrics(synced_lrc=synced, plain=plain)
+
+
+_LRC_TIMESTAMP = re.compile(r"\[\d{1,3}:\d{2}(?:[.:]\d{1,3})?\]")
+
+
+def _strip_lrc(synced: str) -> str:
+    """Plain text from an LRC body: drop every [mm:ss.xx] tag and the blank lines they leave."""
+    lines = (_LRC_TIMESTAMP.sub("", line).strip() for line in synced.splitlines())
+    return "\n".join(line for line in lines if line)
 
 
 class LrclibProvider:
@@ -46,7 +57,7 @@ class LrclibProvider:
         resp.raise_for_status()
         candidates = [c for c in resp.json() if _to_lyrics(c) is not None]
         if not candidates:
-            return None
+            return self._search_title_only(title, duration_seconds)
         if duration_seconds:
 
             def drift(c: dict) -> float:
@@ -58,3 +69,26 @@ class LrclibProvider:
         else:
             best = candidates[0]
         return _to_lyrics(best)
+
+    def _search_title_only(self, title: str, duration_seconds: int | None) -> Lyrics | None:
+        """Last resort when LRCLIB does not know the artist (typical for covers/compilations).
+
+        Returns plain lyrics only: another recording's timestamps would not line up with this audio.
+        Without a known duration versions cannot be told apart, so we give up rather than guess.
+        """
+        if not duration_seconds:
+            return None
+        resp = self._client.get("/api/search", params={"track_name": title}, headers=self._headers)
+        resp.raise_for_status()
+        scored = [
+            (abs(c["duration"] - duration_seconds), lyrics)
+            for c in resp.json()
+            if c.get("duration") and (lyrics := _to_lyrics(c)) is not None
+        ]
+        if not scored:
+            return None
+        gap, best = min(scored, key=lambda pair: pair[0])
+        if gap > MAX_DURATION_DRIFT_SECONDS:
+            return None
+        plain = best.plain or (_strip_lrc(best.synced_lrc) if best.synced_lrc else None)
+        return Lyrics(synced_lrc=None, plain=plain) if plain else None

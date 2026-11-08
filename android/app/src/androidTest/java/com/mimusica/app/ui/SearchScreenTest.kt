@@ -5,6 +5,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
@@ -39,9 +41,10 @@ class SearchScreenTest {
         match: MatchType = MatchType.TITLE,
         duration: Int? = 180,
         withSong: Boolean = false,
+        title: String = "Cielito lindo",
         failure: UiError? = null,
     ) = SearchItem(
-        SearchResult("id", "Cielito lindo", "Quirino Mendoza", null, duration, null, match, state == DownloadState.InLibrary),
+        SearchResult("id", title, "Quirino Mendoza", null, duration, null, match, state == DownloadState.InLibrary),
         state,
         songId = if (withSong) "1" else null,
         song = if (withSong) song else null,
@@ -69,7 +72,8 @@ class SearchScreenTest {
     @Test
     fun showsHintMicrophoneAndBackButtonWithBigTargets() {
         show(SearchUiState())
-        compose.onNodeWithText("Escribe o di el nombre, el cantante o un pedacito de la letra").assertIsDisplayed()
+        // The label stays visible; the longer hint is the placeholder that appears once the field is focused.
+        compose.onNodeWithText("Canción, cantante o letra").assertIsDisplayed()
         compose.onNodeWithText("Hablar").assertHeightIsAtLeast(64.dp)
         compose.onNodeWithText("Volver").assertHeightIsAtLeast(64.dp)
     }
@@ -84,6 +88,33 @@ class SearchScreenTest {
     fun lyricsMatchShowsTag() {
         show(SearchUiState(hasSearched = true, items = listOf(item(DownloadState.NotDownloaded, MatchType.LYRICS))))
         compose.onNodeWithText("Encontrada por la letra").assertExists()
+    }
+
+    @Test
+    fun instrumentalTitlesShowTheInstrumentalTag() {
+        show(
+            SearchUiState(
+                hasSearched = true,
+                items = listOf(item(DownloadState.NotDownloaded, title = "Cielito lindo (Instrumental)")),
+            ),
+        )
+        compose.onNodeWithText("Instrumental").assertExists()
+    }
+
+    @Test
+    fun otherTitlesHaveNoInstrumentalTag() {
+        show(SearchUiState(hasSearched = true, items = listOf(item(DownloadState.NotDownloaded))))
+        compose.onNodeWithText("Instrumental").assertDoesNotExist()
+    }
+
+    @Test
+    fun resultRowIsCompactCoverTitleArtistDurationThenAction() {
+        show(SearchUiState(hasSearched = true, items = listOf(item(DownloadState.NotDownloaded))))
+        val title = compose.onNodeWithText("Cielito lindo").getUnclippedBoundsInRoot()
+        val action = compose.onNodeWithText("Descargar").getUnclippedBoundsInRoot()
+        // The action sits under the identity block and the whole card stays short: no field-sized gaps.
+        assertTrue(action.top >= title.bottom)
+        assertTrue((action.top - title.top) < 220.dp)
     }
 
     @Test
@@ -167,7 +198,7 @@ class SearchScreenTest {
                 )
             }
         }
-        compose.onNodeWithText("Escribe o di el nombre, el cantante o un pedacito de la letra")
+        compose.onNode(hasSetTextAction())
             .performTextInput("volver\n")
         compose.runOnIdle {
             assertEquals(1, searches)

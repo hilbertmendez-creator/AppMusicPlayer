@@ -4,6 +4,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
@@ -15,15 +16,13 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.LibraryMusic
-import androidx.compose.material.icons.filled.Lyrics
-import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.QueueMusic
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -32,33 +31,59 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.mimusica.app.R
+import com.mimusica.app.ui.components.Artwork
 import com.mimusica.app.ui.components.BigIconButton
 import com.mimusica.app.ui.components.MinTouch
-import com.mimusica.app.ui.theme.AmberBrown
-import com.mimusica.app.ui.theme.DeepBlue
-import com.mimusica.app.ui.theme.DeepTeal
 import com.mimusica.app.ui.theme.MiMusicaTheme
+import com.mimusica.app.ui.components.SectionAccent
+import com.mimusica.app.ui.components.SectionAccents
 import com.mimusica.app.ui.theme.OnSolid
-import com.mimusica.app.ui.theme.Plum
 
-data class MiniPlayerUi(val title: String, val artist: String, val isPlaying: Boolean)
+data class MiniPlayerUi(
+    val title: String,
+    val artist: String,
+    val isPlaying: Boolean,
+    val thumbnailUrl: String? = null,
+)
+
+private val HomeGap = 16.dp
+
+/** Space the header row (name + "Aa") takes at normal text size; used only to size the tiles. */
+private val HeaderReserve = 72.dp
+
+/**
+ * Room kept for the mini player whether or not it is showing, so the four tiles are the same height and
+ * stay put when a song starts (big targets that move under a finger are hard to hit). Fits a two-line title.
+ */
+private val MiniPlayerReserve = 144.dp
+private val TileMinHeight = 104.dp
+private val TileMaxHeight = 168.dp
+
+/** Tile height that fills the screen with the mini-player slot reserved; never below [TileMinHeight]. */
+private fun tileHeightFor(available: Dp): Dp {
+    val gaps = HomeGap * 5 // header, four tiles, mini player slot
+    val fit = (available - HeaderReserve - MiniPlayerReserve - gaps) / 4
+    return fit.coerceIn(TileMinHeight, TileMaxHeight)
+}
 
 /**
  * Presentational "Inicio": the app name on the left, "Tamaño de letra" on the right (no PIN needed),
- * four giant buttons each with its own deep colour, and a mini player.
+ * four giant buttons each with its own deep colour and a one-line live subtitle, and a mini player.
+ * The tiles scroll when the text is huge instead of clipping; they keep their height with or without the player.
  */
 @Composable
 fun HomeScreen(
@@ -71,86 +96,119 @@ fun HomeScreen(
     onMiniPlayer: () -> Unit,
     onMiniToggle: () -> Unit,
     modifier: Modifier = Modifier,
+    summary: HomeSummary? = null,
 ) {
+    // Null summary = still loading: no subtitle rather than a wrong "Todavía no tienes canciones".
+    val songsSubtitle = summary?.let {
+        if (it.songs == 0) stringResource(R.string.home_songs_none)
+        else pluralStringResource(R.plurals.song_count, it.songs, it.songs)
+    }
+    val playlistsSubtitle = summary?.let {
+        if (it.playlists == 0) stringResource(R.string.home_playlists_none)
+        else pluralStringResource(R.plurals.home_playlists_count, it.playlists, it.playlists)
+    }
+    val singSubtitle = summary?.let {
+        if (it.singable == 0) stringResource(R.string.home_sing_none)
+        else stringResource(R.string.home_sing_count, it.singable)
+    }
     Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-        Column(
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
                 .windowInsetsPadding(WindowInsets.safeDrawing)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+                .padding(HomeGap),
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    stringResource(R.string.app_name),
+            val tileHeight = tileHeightFor(maxHeight)
+            Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(HomeGap)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        stringResource(R.string.app_name),
+                        modifier = Modifier
+                            .weight(1f)
+                            .semantics { heading() },
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = MaterialTheme.colorScheme.onBackground,
+                    )
+                    TextSizeButton(onClick = onSettings)
+                }
+                // Full-width tiles (one per row) so labels never break mid-word; the list scrolls when the
+                // text is so large that the four tiles no longer fit.
+                Column(
                     modifier = Modifier
                         .weight(1f)
-                        .semantics { heading() },
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = MaterialTheme.colorScheme.onBackground,
-                )
-                TextSizeButton(onClick = onSettings)
-            }
-            // Full-width tiles (one per row) so labels never break mid-word, even at the largest text scale.
-            HomeTile(R.string.home_songs, Icons.Filled.LibraryMusic, DeepBlue, onSongs, Modifier.weight(1f))
-            HomeTile(R.string.home_playlists, Icons.Filled.QueueMusic, Plum, onPlaylists, Modifier.weight(1f))
-            HomeTile(R.string.home_search, Icons.Filled.Search, DeepTeal, onSearch, Modifier.weight(1f))
-            // Lyrics icon, not a microphone: the mic is reserved for "Hablar" (voice search).
-            HomeTile(R.string.home_sing, Icons.Filled.Lyrics, AmberBrown, onSing, Modifier.weight(1f))
-            if (miniPlayer != null) {
-                MiniPlayerBar(miniPlayer, onOpen = onMiniPlayer, onToggle = onMiniToggle)
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(HomeGap),
+                ) {
+                    HomeTile(R.string.home_songs, songsSubtitle, SectionAccents.Songs, onSongs, tileHeight)
+                    HomeTile(R.string.home_playlists, playlistsSubtitle, SectionAccents.Playlists, onPlaylists, tileHeight)
+                    HomeTile(
+                        R.string.home_search, stringResource(R.string.home_search_subtitle),
+                        SectionAccents.Search, onSearch, tileHeight,
+                    )
+                    HomeTile(R.string.home_sing, singSubtitle, SectionAccents.Sing, onSing, tileHeight)
+                }
+                if (miniPlayer != null) {
+                    MiniPlayerBar(miniPlayer, onOpen = onMiniPlayer, onToggle = onMiniToggle)
+                }
             }
         }
     }
 }
 
 /**
- * Round "Aa" pill: short enough to never wrap at any text size. The visible "Aa" is decorative;
- * TalkBack reads the full "Tamaño de letra".
+ * Round "Aa" pill: short enough to never wrap at any text size. TalkBack reads "Aa, Tamaño de letra":
+ * the spoken name starts with the visible text.
  */
 @Composable
 private fun TextSizeButton(onClick: () -> Unit) {
-    val label = stringResource(R.string.home_text_size)
+    val label = stringResource(R.string.home_text_size_desc)
     Surface(
         onClick = onClick,
         modifier = Modifier
             .heightIn(min = MinTouch)
             .widthIn(min = MinTouch)
-            .semantics { contentDescription = label },
+            .semantics {
+                role = Role.Button
+                contentDescription = label
+            },
         shape = RoundedCornerShape(percent = 50),
         color = MaterialTheme.colorScheme.surface,
         contentColor = MaterialTheme.colorScheme.onSurface,
         border = BorderStroke(2.dp, MaterialTheme.colorScheme.outline),
     ) {
         Box(modifier = Modifier.padding(horizontal = 18.dp), contentAlignment = Alignment.Center) {
-            Text("Aa", style = MaterialTheme.typography.titleLarge)
+            Text(stringResource(R.string.home_text_size_pill), style = MaterialTheme.typography.titleLarge)
         }
     }
 }
 
 /**
- * Full-width tile in its own deep colour: the icon sits in a lighter rounded box, the label takes
- * the remaining width, and a chevron says "this opens a screen".
+ * Full-width tile in its own deep colour: the icon sits in a lighter rounded box, the title and a one-line
+ * subtitle take the remaining width, and a chevron says "this opens a screen". [minHeight] is a floor, so
+ * the tile grows with the text instead of clipping it.
  */
 @Composable
 private fun HomeTile(
     labelRes: Int,
-    icon: ImageVector,
-    color: Color,
+    subtitle: String?,
+    accent: SectionAccent,
     onClick: () -> Unit,
+    minHeight: Dp,
     modifier: Modifier = Modifier,
 ) {
     Surface(
         onClick = onClick,
         modifier = modifier
             .fillMaxWidth()
-            .heightIn(min = 96.dp),
+            .heightIn(min = minHeight)
+            .semantics { role = Role.Button },
         shape = RoundedCornerShape(28.dp),
-        color = color,
+        color = accent.color,
         contentColor = OnSolid,
     ) {
         Row(
@@ -164,28 +222,46 @@ private fun HomeTile(
                     .background(OnSolid.copy(alpha = 0.16f), RoundedCornerShape(22.dp)),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(icon, contentDescription = null, modifier = Modifier.size(40.dp))
+                Icon(accent.icon, contentDescription = null, modifier = Modifier.size(40.dp))
             }
-            Text(
-                stringResource(labelRes),
-                modifier = Modifier.weight(1f),
-                style = MaterialTheme.typography.headlineSmall,
-                textAlign = TextAlign.Start,
-            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    stringResource(labelRes),
+                    style = MaterialTheme.typography.headlineSmall,
+                    textAlign = TextAlign.Start,
+                )
+                if (subtitle != null) {
+                    Text(
+                        subtitle,
+                        style = MaterialTheme.typography.bodyLarge,
+                        textAlign = TextAlign.Start,
+                        // No line cap: at the largest text sizes the subtitle wraps and the tile grows (it has a minimum
+                        // height, not a fixed one) instead of cutting "Todavía ninguna con letra" short.
+                    )
+                }
+            }
             Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, modifier = Modifier.size(36.dp))
         }
     }
 }
 
-/** "Sonando ahora" card: a small cover, three lines (label, title, artist) and a big round play/pause. */
+/**
+ * "Sonando ahora" card: the cover, three lines (label, title, artist) and a big round play/pause.
+ * The card opens the player ("Abrir el reproductor" for TalkBack); the pause button stays its own stop.
+ */
 @Composable
 fun MiniPlayerBar(state: MiniPlayerUi, onOpen: () -> Unit, onToggle: () -> Unit, modifier: Modifier = Modifier) {
+    val openLabel = stringResource(R.string.mini_player_open)
     Surface(
         onClick = onOpen,
         modifier = modifier
             .fillMaxWidth()
             .heightIn(min = 96.dp)
-            .semantics { role = Role.Button },
+            .semantics {
+                role = Role.Button
+                // Label only: the click action itself still comes from the Surface.
+                onClick(label = openLabel, action = null)
+            },
         shape = RoundedCornerShape(28.dp),
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(2.dp, MaterialTheme.colorScheme.outline),
@@ -195,14 +271,8 @@ fun MiniPlayerBar(state: MiniPlayerUi, onOpen: () -> Unit, onToggle: () -> Unit,
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            Box(
-                modifier = Modifier
-                    .size(68.dp)
-                    .background(DeepBlue, RoundedCornerShape(18.dp)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(Icons.Filled.MusicNote, contentDescription = null, tint = OnSolid, modifier = Modifier.size(36.dp))
-            }
+            // Decorative: the card is already named by the title and artist next to it.
+            Artwork(url = state.thumbnailUrl, size = 68.dp, decorative = true)
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     stringResource(R.string.mini_player_now),
@@ -239,6 +309,7 @@ private fun HomeScreenPreview() {
     MiMusicaTheme {
         HomeScreen(
             miniPlayer = MiniPlayerUi("Volver", "Gardel", true),
+            summary = HomeSummary(songs = 12, playlists = 2, singable = 8),
             onSongs = {}, onPlaylists = {}, onSearch = {}, onSing = {},
             onSettings = {}, onMiniPlayer = {}, onMiniToggle = {},
         )

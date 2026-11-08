@@ -20,16 +20,21 @@ import androidx.compose.ui.unit.dp
 import coil.compose.SubcomposeAsyncImage
 import com.mimusica.app.R
 
-/** Cover image with a fixed [size]; a music-note placeholder when there is no URL or it fails to load. */
+/**
+ * Cover image with a fixed [size]; a music-note placeholder when there is no URL or it fails to load.
+ * Pass [decorative] = true inside a card that is already named by its title: TalkBack then skips the cover
+ * instead of announcing "Portada de la canción" on every row.
+ */
 @Composable
-fun Artwork(url: String?, size: Dp, modifier: Modifier = Modifier) {
-    ArtworkFill(url = url, modifier = modifier.size(size))
+fun Artwork(url: String?, size: Dp, modifier: Modifier = Modifier, decorative: Boolean = false) {
+    ArtworkFill(url = url, modifier = modifier.size(size), decorative = decorative)
 }
 
 /** Cover image that fills whatever square its parent gives it (used where the size depends on free space). */
 @Composable
-fun ArtworkFill(url: String?, modifier: Modifier = Modifier) {
+fun ArtworkFill(url: String?, modifier: Modifier = Modifier, decorative: Boolean = false) {
     val shape = RoundedCornerShape(12.dp)
+    val description = if (decorative) null else stringResource(R.string.cover_art)
     val placeholder: @Composable () -> Unit = {
         Box(
             modifier = Modifier
@@ -39,7 +44,7 @@ fun ArtworkFill(url: String?, modifier: Modifier = Modifier) {
         ) {
             Icon(
                 Icons.Filled.MusicNote,
-                contentDescription = stringResource(R.string.cover_art),
+                contentDescription = description,
                 modifier = Modifier.fillMaxSize(0.5f),
                 tint = MaterialTheme.colorScheme.primary,
             )
@@ -51,7 +56,7 @@ fun ArtworkFill(url: String?, modifier: Modifier = Modifier) {
         } else {
             SubcomposeAsyncImage(
                 model = url,
-                contentDescription = stringResource(R.string.cover_art),
+                contentDescription = description,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
                 loading = { placeholder() },

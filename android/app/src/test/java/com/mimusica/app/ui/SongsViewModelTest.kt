@@ -59,6 +59,46 @@ class SongsViewModelTest {
     }
 
     @Test
+    fun `delete success remembers which song was deleted so the screen can say so`() = runTest {
+        remote.songs += song("a", title = "Besame Mucho")
+        songDao.upsert(listOf(song("a", title = "Besame Mucho").toEntity("/x/a")))
+        val vm = SongsViewModel(library)
+        advanceUntilIdle()
+
+        vm.delete(vm.uiState.value.songs.single())
+        advanceUntilIdle()
+
+        assertEquals("Besame Mucho", vm.uiState.value.deletedTitle)
+    }
+
+    @Test
+    fun `delete failure leaves no deleted notice`() = runTest {
+        songDao.upsert(listOf(song("a").toEntity("/x/a")))
+        val vm = SongsViewModel(library)
+        advanceUntilIdle()
+        remote.failure = NoInternetException(RuntimeException())
+
+        vm.delete(vm.uiState.value.songs.single())
+        advanceUntilIdle()
+
+        assertEquals(null, vm.uiState.value.deletedTitle)
+    }
+
+    @Test
+    fun `the deleted notice can be cleared`() = runTest {
+        remote.songs += song("a")
+        songDao.upsert(listOf(song("a").toEntity("/x/a")))
+        val vm = SongsViewModel(library)
+        advanceUntilIdle()
+        vm.delete(vm.uiState.value.songs.single())
+        advanceUntilIdle()
+
+        vm.clearNotice()
+
+        assertEquals(null, vm.uiState.value.deletedTitle)
+    }
+
+    @Test
     fun `delete success removes the song`() = runTest {
         remote.songs += song("a")
         songDao.upsert(listOf(song("a").toEntity("/x/a")))

@@ -15,6 +15,8 @@ import kotlinx.coroutines.launch
 data class SongsUiState(
     val songs: List<Song> = emptyList(),
     val error: UiError? = null,
+    /** Title of the song that was just deleted, for the "Se borró «…»." confirmation; null otherwise. */
+    val deletedTitle: String? = null,
 ) {
     /** Songs that have lyrics, for the "Cantar" list. */
     val singable: List<Song> get() = songs.filter { it.hasLyrics }
@@ -31,10 +33,14 @@ class SongsViewModel(private val library: LibraryRepository) : ViewModel() {
     }
 
     fun delete(song: Song) {
-        _uiState.update { it.copy(error = null) }
+        _uiState.update { it.copy(error = null, deletedTitle = null) }
         viewModelScope.launch {
             runCatchingUi { library.deleteSong(song.id) }
+                .onSuccess { _uiState.update { it.copy(deletedTitle = song.title) } }
                 .onFailure { e -> _uiState.update { it.copy(error = e.toUiError()) } }
         }
     }
+
+    /** Forget the confirmation once the screen is left, so it does not greet the next visit. */
+    fun clearNotice() = _uiState.update { it.copy(deletedTitle = null) }
 }

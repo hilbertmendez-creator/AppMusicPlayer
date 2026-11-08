@@ -14,6 +14,9 @@ data class Song(
     val audioPath: String?,
 ) {
     val hasLyrics: Boolean get() = hasSyncedLyrics || hasPlainLyrics
+
+    /** Words only, no timing: the karaoke cannot follow along, so the UI says so ("Letra completa"). */
+    val hasPlainLyricsOnly: Boolean get() = hasPlainLyrics && !hasSyncedLyrics
     val isDownloaded: Boolean get() = audioPath != null
 }
 

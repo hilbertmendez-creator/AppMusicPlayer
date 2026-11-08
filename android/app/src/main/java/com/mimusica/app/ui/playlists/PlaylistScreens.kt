@@ -10,7 +10,9 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -36,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.mimusica.app.R
@@ -52,6 +55,7 @@ import com.mimusica.app.ui.components.MinTouch
 import com.mimusica.app.ui.components.OutlineBigButton
 import com.mimusica.app.ui.components.RowCard
 import com.mimusica.app.ui.components.ScreenScaffold
+import com.mimusica.app.ui.components.SectionAccents
 import com.mimusica.app.ui.state.UiError
 
 /** Presentational "Mis listas": the name on its own line, the song count as a quieter second line. */
@@ -64,7 +68,12 @@ fun PlaylistsScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    ScreenScaffold(title = stringResource(R.string.playlists_title), onBack = onBack, modifier = modifier) {
+    ScreenScaffold(
+        title = stringResource(R.string.playlists_title),
+        onBack = onBack,
+        modifier = modifier,
+        accent = SectionAccents.Playlists,
+    ) {
         error?.let { ErrorBanner(it) }
         BigButton(stringResource(R.string.new_playlist), onNew, icon = Icons.Filled.Add)
         if (playlists.isEmpty()) EmptyMessage(stringResource(R.string.playlists_empty))
@@ -98,6 +107,7 @@ fun AddToListScreen(
                 stringResource(R.string.add_to_list_song, it.title, it.artist),
                 style = MaterialTheme.typography.titleMedium,
                 maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
             )
         }
         addedTo?.let { MessageBanner(stringResource(R.string.added_to_list, it), isError = false) }
@@ -127,8 +137,12 @@ fun NewPlaylistDialog(
         onDismissRequest = onCancel,
         containerColor = MaterialTheme.colorScheme.surface,
         title = { Text(stringResource(R.string.new_playlist), style = MaterialTheme.typography.titleLarge) },
+        // Scrolls so the field, "Hablar" and any message stay reachable at the largest text size.
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
                 OutlinedTextField(
                     value = name,
                     onValueChange = onNameChange,
@@ -173,7 +187,7 @@ fun PlaylistDetailScreen(
 ) {
     var pendingRemove by remember { mutableStateOf<Song?>(null) }
     var confirmDeleteList by remember { mutableStateOf(false) }
-    ScreenScaffold(title = playlist.name, onBack = onBack, modifier = modifier) {
+    ScreenScaffold(title = playlist.name, onBack = onBack, modifier = modifier, accent = SectionAccents.Playlists) {
         error?.let { ErrorBanner(it) }
         if (songs.isNotEmpty()) {
             BigButton(stringResource(R.string.play_all), onPlayAll, icon = Icons.Filled.PlayArrow)
@@ -185,7 +199,9 @@ fun PlaylistDetailScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(min = MinTouch),
+                        .heightIn(min = MinTouch)
+                        // One spoken unit: "Título, Cantante" instead of two separate focus stops.
+                        .semantics(mergeDescendants = true) {},
                 ) {
                     Text(
                         song.title,
@@ -206,8 +222,13 @@ fun PlaylistDetailScreen(
                     icon = Icons.Filled.PlayArrow,
                     minHeight = 72.dp,
                     color = MaterialTheme.colorScheme.primary,
+                    description = stringResource(R.string.song_play_desc, song.title),
                 )
-                DemotedDangerAction(stringResource(R.string.remove), { pendingRemove = song })
+                DemotedDangerAction(
+                    stringResource(R.string.remove),
+                    { pendingRemove = song },
+                    description = stringResource(R.string.remove_song_desc, song.title),
+                )
             }
         }
         OutlineBigButton(

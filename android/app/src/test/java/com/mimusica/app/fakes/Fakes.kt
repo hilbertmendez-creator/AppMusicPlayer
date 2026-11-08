@@ -187,10 +187,17 @@ class FakePlayer : PlayerPort {
     }
     override fun next() = Unit
     override fun previous() = Unit
-    override fun seekTo(positionMs: Long) = Unit
+    val seeks = mutableListOf<Long>()
+    override fun seekTo(positionMs: Long) {
+        seeks += positionMs
+        state.value = state.value.copy(positionMs = positionMs)
+    }
     override fun volumeUp() = Unit
     override fun volumeDown() = Unit
     fun setPosition(ms: Long) {
         state.value = state.value.copy(positionMs = ms)
+    }
+    fun setDuration(ms: Long) {
+        state.value = state.value.copy(durationMs = ms)
     }
 }

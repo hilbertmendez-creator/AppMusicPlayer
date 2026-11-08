@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
@@ -41,6 +42,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
@@ -49,12 +51,15 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.mimusica.app.R
 import com.mimusica.app.ui.state.UiError
+import com.mimusica.app.ui.theme.OnSolid
 import com.mimusica.app.ui.theme.Success
 
 /** Minimum touch target for every control in the app (senior-friendly). */
@@ -107,12 +112,14 @@ fun OutlineBigButton(
     icon: ImageVector? = null,
     minHeight: Dp = MinTouch,
     color: Color = MaterialTheme.colorScheme.onSurface,
+    description: String? = null,
 ) {
     OutlinedButton(
         onClick = onClick,
         modifier = modifier
             .fillMaxWidth()
-            .heightIn(min = minHeight),
+            .heightIn(min = minHeight)
+            .then(if (description != null) Modifier.semantics { contentDescription = description } else Modifier),
         shape = RoundedCornerShape(16.dp),
         border = BorderStroke(2.dp, color),
         contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
@@ -160,6 +167,10 @@ fun BigIconButton(
     }
 }
 
+/**
+ * "Volver": icon + word, a thin outline and the minimum touch height. Quieter than the primary buttons on
+ * purpose, it is the way out of a screen and not what the screen is for.
+ */
 @Composable
 fun BackButton(onClick: () -> Unit, modifier: Modifier = Modifier, dark: Boolean = false) {
     val color = if (dark) Color.White else MaterialTheme.colorScheme.onSurface
@@ -167,22 +178,106 @@ fun BackButton(onClick: () -> Unit, modifier: Modifier = Modifier, dark: Boolean
         onClick = onClick,
         modifier = modifier.heightIn(min = MinTouch),
         shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(2.dp, color),
+        border = BorderStroke(1.dp, color),
+        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
         colors = ButtonDefaults.outlinedButtonColors(contentColor = color),
     ) {
-        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, modifier = Modifier.size(28.dp))
+        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, modifier = Modifier.size(26.dp))
         Spacer(Modifier.width(8.dp))
-        Text(stringResource(R.string.back), style = MaterialTheme.typography.labelLarge)
+        Text(stringResource(R.string.back), style = MaterialTheme.typography.labelMedium)
     }
 }
 
-/** Standard screen: a big "Volver" button, a large title (a TalkBack heading) and scrollable content. */
+private val HeaderGap = 12.dp
+
+/** Width the accent chip takes in front of the title: the 44dp chip and its 10dp gap. */
+private val ChipSlot = 54.dp
+
+/** Optional accent chip (the Home tile's icon in its colour) followed by the title, which is a TalkBack heading. */
+@Composable
+private fun TitleWithAccent(title: String, accent: SectionAccent?) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        if (accent != null) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .background(accent.color, RoundedCornerShape(14.dp)),
+                contentAlignment = Alignment.Center,
+            ) {
+                // Decorative: the title next to it already names the screen.
+                Icon(accent.icon, contentDescription = null, tint = OnSolid, modifier = Modifier.size(28.dp))
+            }
+        }
+        Text(
+            title,
+            modifier = Modifier.semantics { heading() },
+            style = MaterialTheme.typography.headlineMedium,
+            color = MaterialTheme.colorScheme.onBackground,
+        )
+    }
+}
+
+/**
+ * "Volver" and the title share one row so the content starts high on the screen. They go side by side whenever
+ * the longest word of the title still fits beside the button (a long title wraps between words); when it does
+ * not, as at the largest text sizes, the title drops below "Volver" instead of being squeezed or clipped.
+ */
+@Composable
+private fun ScreenHeader(title: String, onBack: (() -> Unit)?, accent: SectionAccent?) {
+    val measurer = rememberTextMeasurer()
+    val titleStyle = MaterialTheme.typography.headlineMedium
+    // Measured, not asked of the layout system: the widest word of the title, so a word is never broken or squeezed.
+    val longestWordPx = title.split(' ').maxOfOrNull {
+        measurer.measure(it, titleStyle, maxLines = 1, softWrap = false).size.width
+    } ?: 0
+    if (onBack == null) {
+        TitleWithAccent(title, accent)
+        return
+    }
+    Layout(
+        content = {
+            BackButton(onBack)
+            TitleWithAccent(title, accent)
+        },
+        modifier = Modifier.fillMaxWidth(),
+    ) { measurables, constraints ->
+        val width = constraints.maxWidth
+        val gap = HeaderGap.roundToPx()
+        val backMeasurable = measurables[0]
+        val titleMeasurable = measurables[1]
+        val titleNeeds = longestWordPx + if (accent != null) (ChipSlot).roundToPx() else 0
+        // Natural size of the button (measured loose), so its own label can never be squeezed.
+        val back = backMeasurable.measure(Constraints(maxWidth = width))
+        val backWidth = back.width
+        if (backWidth + gap + titleNeeds <= width) {
+            val title = titleMeasurable.measure(Constraints(maxWidth = width - backWidth - gap))
+            val height = maxOf(back.height, title.height)
+            layout(width, height) {
+                back.placeRelative(0, (height - back.height) / 2)
+                title.placeRelative(backWidth + gap, (height - title.height) / 2)
+            }
+        } else {
+            val title = titleMeasurable.measure(Constraints(maxWidth = width))
+            layout(width, back.height + gap + title.height) {
+                back.placeRelative(0, 0)
+                title.placeRelative(0, back.height + gap)
+            }
+        }
+    }
+}
+
+/**
+ * Standard screen: a quiet "Volver" and a large title on one row (stacked only when the text is too big for
+ * that), then scrollable content. [accent] opts a destination screen into its Home tile's colour: a chip next
+ * to the title and a thin bar under the header. It never recolours anything else.
+ */
 @Composable
 fun ScreenScaffold(
     title: String,
     onBack: (() -> Unit)?,
     modifier: Modifier = Modifier,
     scrollable: Boolean = true,
+    accent: SectionAccent? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
@@ -193,13 +288,17 @@ fun ScreenScaffold(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            if (onBack != null) BackButton(onBack)
-            Text(
-                title,
-                modifier = Modifier.semantics { heading() },
-                style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.onBackground,
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                ScreenHeader(title, onBack, accent)
+                if (accent != null) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(6.dp)
+                            .background(accent.color, RoundedCornerShape(3.dp)),
+                    )
+                }
+            }
             val bodyModifier = if (scrollable) {
                 Modifier
                     .weight(1f)
@@ -215,26 +314,37 @@ fun ScreenScaffold(
     }
 }
 
-/** Confirmation before any delete: big "Sí, borrar" and "No". */
+/**
+ * Confirmation before any delete. The SAFE choice is the primary button and comes first: "No, conservarla"
+ * (filled, 72dp). The destructive "Sí, borrar" is secondary: an outlined red button. Both are >= 64dp.
+ * [note] is an optional reassurance under the question (e.g. that the song can be downloaded again).
+ */
 @Composable
-fun ConfirmDeleteDialog(message: String, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+fun ConfirmDeleteDialog(message: String, onConfirm: () -> Unit, onDismiss: () -> Unit, note: String? = null) {
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = MaterialTheme.colorScheme.surface,
         title = null,
-        text = { Text(message, style = MaterialTheme.typography.titleMedium) },
-        confirmButton = {
-            BigButton(
-                text = stringResource(R.string.yes_delete),
-                onClick = onConfirm,
-                minHeight = MinTouch,
-                containerColor = MaterialTheme.colorScheme.error,
-                contentColor = MaterialTheme.colorScheme.onError,
-            )
+        // Buttons live in the content, stacked in an explicit order: Material's button slots wrap
+        // full-width buttons with the confirm (destructive) one on top, which is the wrong first choice here.
+        // Scrolls: at the largest text size (or on a small phone) the buttons must stay reachable, never cut off.
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text(message, style = MaterialTheme.typography.titleMedium)
+                if (note != null) Text(note, style = MaterialTheme.typography.bodyLarge)
+                BigButton(text = stringResource(R.string.keep_it), onClick = onDismiss)
+                OutlineBigButton(
+                    text = stringResource(R.string.yes_delete),
+                    onClick = onConfirm,
+                    minHeight = MinTouch,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
         },
-        dismissButton = {
-            OutlineBigButton(text = stringResource(R.string.no), onClick = onDismiss)
-        },
+        confirmButton = {},
     )
 }
 
@@ -255,7 +365,8 @@ fun MessageBanner(message: String, modifier: Modifier = Modifier, isError: Boole
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .semantics { liveRegion = LiveRegionMode.Polite },
+            // Merged: the message is one node that is both the text and the live region (TalkBack reads it once).
+            .semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite },
         shape = RoundedCornerShape(12.dp),
         border = BorderStroke(2.dp, color),
         color = MaterialTheme.colorScheme.surface,
@@ -288,6 +399,8 @@ fun EmptyMessage(
     actionText: String? = null,
     onAction: (() -> Unit)? = null,
     actionIcon: ImageVector? = null,
+    /** Announce the text politely when it appears (an empty search result shows up without any focus change). */
+    live: Boolean = false,
 ) {
     Column(
         modifier = modifier
@@ -297,7 +410,9 @@ fun EmptyMessage(
     ) {
         Text(
             text,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .then(if (live) Modifier.semantics { liveRegion = LiveRegionMode.Polite } else Modifier),
             style = MaterialTheme.typography.titleMedium,
             textAlign = TextAlign.Center,
         )
@@ -331,7 +446,13 @@ fun InlineError(text: String, modifier: Modifier = Modifier) {
  * Still >= 64dp tall. Callers must still confirm before doing anything destructive.
  */
 @Composable
-fun DemotedDangerAction(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, icon: ImageVector? = null) {
+fun DemotedDangerAction(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    icon: ImageVector? = null,
+    description: String? = null,
+) {
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -340,7 +461,9 @@ fun DemotedDangerAction(text: String, onClick: () -> Unit, modifier: Modifier = 
     ) {
         OutlinedButton(
             onClick = onClick,
-            modifier = Modifier.heightIn(min = MinTouch),
+            modifier = Modifier
+                .heightIn(min = MinTouch)
+                .then(if (description != null) Modifier.semantics { contentDescription = description } else Modifier),
             shape = RoundedCornerShape(16.dp),
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
@@ -391,6 +514,23 @@ fun ListRowButton(title: String, subtitle: String, onClick: () -> Unit, modifier
     }
 }
 
+/** Small informative label on a list row ("Instrumental", "Letra completa"); never tappable. */
+@Composable
+fun TagChip(text: String, modifier: Modifier = Modifier) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(8.dp),
+        color = MaterialTheme.colorScheme.primaryContainer,
+    ) {
+        Text(
+            text,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onPrimaryContainer,
+        )
+    }
+}
+
 /** Card container used for list rows: a slightly lighter surface with the outline kept. */
 @Composable
 fun RowCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
@@ -404,20 +544,78 @@ fun RowCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -
     }
 }
 
-/** Non-clickable success badge with a big readable label, used instead of a disabled button. */
+/**
+ * Success status as a plain line: green check icon + green text sitting on the card, with no filled slab and
+ * no button shape, so it never looks tappable (DeepGreen on Card is >= 7:1). Pass a live-region modifier to
+ * have TalkBack announce it politely when it appears.
+ */
 @Composable
 fun StatusPill(text: String, icon: ImageVector, modifier: Modifier = Modifier) {
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .heightIn(min = BigButtonHeight)
-            .background(Success.container, RoundedCornerShape(16.dp))
-            .padding(horizontal = 20.dp, vertical = 12.dp),
+            .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Icon(icon, contentDescription = null, tint = Success.onContainer, modifier = Modifier.size(32.dp))
-        Spacer(Modifier.width(12.dp))
-        Text(text, style = MaterialTheme.typography.labelLarge, color = Success.onContainer)
+        Icon(icon, contentDescription = null, tint = Success.text, modifier = Modifier.size(32.dp))
+        Text(text, modifier = Modifier.weight(1f), style = MaterialTheme.typography.labelLarge, color = Success.text)
+    }
+}
+
+/**
+ * A big primary action with a smaller secondary one beside it ("Reproducir" + "Borrar"). When both fit on one
+ * line the secondary keeps its natural width at the end and the primary takes the rest; when the text is too
+ * large for that (or the screen too narrow) they stack: primary full width, secondary below at the end.
+ * Labels therefore never break mid-word and never overlap.
+ */
+@Composable
+fun PrimaryWithSecondary(
+    primary: @Composable () -> Unit,
+    secondary: @Composable () -> Unit,
+    modifier: Modifier = Modifier,
+    gap: Dp = 12.dp,
+) {
+    Layout(content = { primary(); secondary() }, modifier = modifier.fillMaxWidth()) { measurables, constraints ->
+        val width = constraints.maxWidth
+        val gapPx = gap.roundToPx()
+        val primaryMeasurable = measurables[0]
+        val secondaryMeasurable = measurables[1]
+        val secondaryNatural = secondaryMeasurable.maxIntrinsicWidth(Constraints.Infinity).coerceAtMost(width)
+        val primaryNeeds = primaryMeasurable.minIntrinsicWidth(Constraints.Infinity)
+        val sideBySide = primaryNeeds + gapPx + secondaryNatural <= width
+        if (sideBySide) {
+            val secondary = secondaryMeasurable.measure(Constraints.fixedWidth(secondaryNatural))
+            val primary = primaryMeasurable.measure(Constraints.fixedWidth(width - gapPx - secondaryNatural))
+            val height = maxOf(primary.height, secondary.height)
+            layout(width, height) {
+                primary.placeRelative(0, (height - primary.height) / 2)
+                secondary.placeRelative(width - secondaryNatural, (height - secondary.height) / 2)
+            }
+        } else {
+            val primary = primaryMeasurable.measure(Constraints.fixedWidth(width))
+            val secondary = secondaryMeasurable.measure(Constraints.fixedWidth(secondaryNatural))
+            layout(width, primary.height + gapPx + secondary.height) {
+                primary.placeRelative(0, 0)
+                secondary.placeRelative(width - secondaryNatural, primary.height + gapPx)
+            }
+        }
+    }
+}
+
+/** Quiet red outlined button (no icon, text only) for a destructive action that must stay reachable but secondary. */
+@Composable
+fun DangerOutlineButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, description: String? = null) {
+    OutlinedButton(
+        onClick = onClick,
+        modifier = modifier
+            .heightIn(min = MinTouch)
+            .then(if (description != null) Modifier.semantics { contentDescription = description } else Modifier),
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+    ) {
+        Text(text, style = MaterialTheme.typography.labelMedium)
     }
 }

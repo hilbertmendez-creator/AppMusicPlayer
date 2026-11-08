@@ -15,6 +15,7 @@ import androidx.media3.session.SessionToken
 import com.mimusica.app.domain.model.Song
 import com.mimusica.app.domain.player.PlaybackState
 import com.mimusica.app.domain.player.PlayerPort
+import com.mimusica.app.domain.player.volumeLevel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -74,10 +75,16 @@ class PlayerController(private val context: Context, scope: CoroutineScope) : Pl
         scope.launch {
             while (isActive) {
                 delay(TICK_MS)
-                if (controller?.isPlaying == true) publish()
+                // While paused nothing else changes, but the phone's volume keys still can: keep "Volumen 6 de 10" true.
+                if (controller?.isPlaying == true || currentVolumeLevel() != _state.value.volumeLevel) publish()
             }
         }
     }
+
+    private fun currentVolumeLevel(): Int = volumeLevel(
+        audioManager.getStreamVolume(AudioManager.STREAM_MUSIC),
+        audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC),
+    )
 
     override fun play(songs: List<Song>, startIndex: Int) {
         val playable = songs.filter { it.audioPath != null }
@@ -112,6 +119,7 @@ class PlayerController(private val context: Context, scope: CoroutineScope) : Pl
 
     private fun adjustVolume(direction: Int) {
         audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, direction, AudioManager.FLAG_SHOW_UI)
+        publish()
     }
 
     private fun withController(block: (MediaController) -> Unit) {
@@ -135,6 +143,7 @@ class PlayerController(private val context: Context, scope: CoroutineScope) : Pl
             hasNext = c.hasNextMediaItem(),
             hasPrevious = c.hasPreviousMediaItem(),
             nextTitle = nextTitle(c),
+            volumeLevel = currentVolumeLevel(),
         )
     }
 
