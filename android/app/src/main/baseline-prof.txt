@@ -1,0 +1,5 @@
+# Baseline profile (hand written, wildcard form): tells ART to precompile the app's own startup path on release
+# builds so the first launch is not interpreted. Library profiles (Compose, Media3, Room, WorkManager...) are
+# merged in by AGP from the dependencies themselves. Regenerate with a Macrobenchmark module if one is added.
+HSPLcom/mimusica/app/**;->**(**)**
+Lcom/mimusica/app/**;

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Pearl grey: window, splash and Compose background all share this value (see Theme.kt Paper). -->
+    <color name="paper">#FFF1F3F5</color>
+    <color name="ic_launcher_background">#FF6A1B6B</color>
+</resources>

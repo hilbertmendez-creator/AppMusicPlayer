@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Backend runtime data
+backend/data/
+*.sqlite3
+.env
+
+# Android / Gradle
+android/.gradle/
+android/.kotlin/
+android/build/
+android/app/build/
+android/local.properties
+android/.idea/
+*.iml
+*.apk
+*.aab
+*.jks
+*.keystore
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.codegraph/
+
+# Local agent tooling cache
+.atl/

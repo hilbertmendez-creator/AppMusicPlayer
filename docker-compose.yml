@@ -1,0 +1,14 @@
+services:
+  backend:
+    build:
+      context: ./backend
+    image: mi-musica-backend:latest
+    env_file:
+      - backend/.env
+    environment:
+      DATA_DIR: /data
+    volumes:
+      - ./backend/data:/data
+    ports:
+      - "8000:8000"
+    restart: unless-stopped

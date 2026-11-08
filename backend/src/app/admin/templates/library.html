@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Biblioteca{% endblock %}
+{% block content %}
+<h1>Biblioteca ({{ songs|length }})</h1>
+{% if not songs %}<p class="muted">Todavía no hay canciones. Usa «Buscar» para descargar la primera.</p>{% endif %}
+{% for s in songs %}
+<div class="card">
+  <strong>{{ s.title }}</strong> — {{ s.artist }}
+  <div class="muted">
+    {% if s.duration_seconds %}{{ s.duration_seconds // 60 }}:{{ '%02d' % (s.duration_seconds % 60) }} · {% endif %}
+    {% if s.has_synced_lyrics %}Letra sincronizada{% elif s.has_plain_lyrics %}Letra sin sincronizar{% else %}Sin letra{% endif %}
+  </div>
+  <div class="row" style="margin-top:.5rem">
+    <form class="inline" method="post" action="/admin/library/{{ s.id }}/offset">
+      <label>Desfase de la letra (ms)
+        <input type="number" name="offset_ms" value="{{ s.lyrics_offset_ms }}" step="50" min="-600000" max="600000" required>
+      </label>
+      <button type="submit" class="secondary">Guardar</button>
+      <div class="muted">¿La letra va atrasada? Pon un número positivo (ej. 500). ¿Va adelantada? Pon uno negativo.</div>
+    </form>
+    <form class="inline" method="post" action="/admin/library/{{ s.id }}/refresh-lyrics">
+      <button type="submit" class="secondary">Buscar letra otra vez</button>
+    </form>
+    <form class="inline" method="post" action="/admin/library/{{ s.id }}/delete"
+          onsubmit="return confirm('¿Seguro que quieres borrar esta canción? No se puede deshacer.')">
+      <button type="submit" class="danger">Borrar</button>
+    </form>
+  </div>
+</div>
+{% endfor %}
+{% endblock %}

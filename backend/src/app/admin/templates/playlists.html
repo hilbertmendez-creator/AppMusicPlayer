@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Listas{% endblock %}
+{% block content %}
+<h1>Listas de reproducción</h1>
+<form method="post" action="/admin/playlists" class="row card">
+  <input type="text" name="name" maxlength="80" required placeholder="Nombre de la lista nueva" aria-label="Nombre">
+  <button type="submit">Crear lista</button>
+</form>
+
+{% for p in playlists %}
+<div class="card">
+  <div class="row" style="justify-content:space-between">
+    <form class="inline" method="post" action="/admin/playlists/{{ p.id }}/rename">
+      <input type="text" name="name" value="{{ p.name }}" maxlength="80" required aria-label="Nombre de la lista">
+      <button type="submit" class="secondary">Renombrar</button>
+    </form>
+    <form class="inline" method="post" action="/admin/playlists/{{ p.id }}/delete"
+          onsubmit="return confirm('¿Seguro que quieres borrar esta lista? Las canciones se conservan.')">
+      <button type="submit" class="danger">Borrar lista</button>
+    </form>
+  </div>
+
+  {% if p.song_ids %}
+  <ol class="songs">
+    {% for sid in p.song_ids %}
+    {% set s = by_id.get(sid) %}
+    <li>
+      {% if s %}{{ s.title }} — {{ s.artist }}{% else %}(canción no disponible){% endif %}
+      <form class="inline" method="post" action="/admin/playlists/{{ p.id }}/songs/{{ sid }}/move">
+        <input type="hidden" name="direction" value="up"><button type="submit" class="secondary" aria-label="Subir">↑</button>
+      </form>
+      <form class="inline" method="post" action="/admin/playlists/{{ p.id }}/songs/{{ sid }}/move">
+        <input type="hidden" name="direction" value="down"><button type="submit" class="secondary" aria-label="Bajar">↓</button>
+      </form>
+      <form class="inline" method="post" action="/admin/playlists/{{ p.id }}/songs/{{ sid }}/remove">
+        <button type="submit" class="secondary">Quitar</button>
+      </form>
+    </li>
+    {% endfor %}
+  </ol>
+  {% else %}
+  <p class="muted">Lista vacía.</p>
+  {% endif %}
+
+  {% set available = songs | rejectattr('id', 'in', p.song_ids) | list %}
+  {% if available %}
+  <form class="inline" method="post" action="/admin/playlists/{{ p.id }}/songs">
+    <select name="song_id" aria-label="Canción a agregar">
+      {% for s in available %}<option value="{{ s.id }}">{{ s.title }} — {{ s.artist }}</option>{% endfor %}
+    </select>
+    <button type="submit">Agregar</button>
+  </form>
+  {% endif %}
+</div>
+{% else %}
+<p class="muted">Todavía no hay listas.</p>
+{% endfor %}
+{% endblock %}

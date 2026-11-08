@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Mi Música</string>
+
+    <!-- Inicio -->
+    <string name="home_songs">Mis canciones</string>
+    <string name="home_playlists">Mis listas</string>
+    <string name="home_search">Buscar</string>
+    <string name="home_sing">Cantar</string>
+    <string name="home_text_size">Tamaño de letra</string>
+    <string name="mini_player_now">Sonando ahora</string>
+    <string name="mini_player_open">Abrir el reproductor</string>
+
+    <!-- Comunes -->
+    <string name="back">Volver</string>
+    <string name="play">Reproducir</string>
+    <string name="pause">Pausar</string>
+    <string name="next">Siguiente</string>
+    <string name="previous">Anterior</string>
+    <string name="volume">Volumen</string>
+    <string name="volume_up">Subir el volumen</string>
+    <string name="volume_down">Bajar el volumen</string>
+    <string name="delete">Borrar</string>
+    <string name="yes_delete">Sí, borrar</string>
+    <string name="no">No</string>
+    <string name="cancel">Cancelar</string>
+    <string name="create">Crear</string>
+    <string name="save">Guardar</string>
+    <string name="saved">Guardado</string>
+    <string name="sing">Cantar</string>
+    <string name="cover_art">Portada de la canción</string>
+    <string name="selected_check">Elegida</string>
+    <plurals name="song_count">
+        <item quantity="one">%d canción</item>
+        <item quantity="other">%d canciones</item>
+    </plurals>
+
+    <!-- Errores amables -->
+    <string name="error_no_internet">No hay internet. Tus canciones descargadas siguen funcionando.</string>
+    <string name="error_unauthorized">La app no tiene permiso para entrar al servidor. Pide ayuda a quien la configuró.</string>
+    <string name="error_server">El servidor tuvo un problema. Inténtalo más tarde.</string>
+    <string name="error_unknown">Algo salió mal. Inténtalo otra vez.</string>
+
+    <!-- Buscar -->
+    <string name="search_title">Buscar</string>
+    <string name="search_hint">Escribe o di el nombre, el cantante o un pedacito de la letra</string>
+    <string name="search_button">Buscar</string>
+    <string name="search_mic">Hablar</string>
+    <string name="search_mic_desc">Hablar para buscar una canción</string>
+    <string name="search_searching">Buscando…</string>
+    <string name="search_no_results">No encontré nada. Prueba con otras palabras.</string>
+    <string name="search_tag_lyrics">Encontrada por la letra</string>
+    <string name="mic_unavailable">El micrófono no está disponible. Escribe lo que buscas.</string>
+    <string name="mic_prompt">Di el nombre de la canción o del cantante</string>
+    <string name="download">Descargar</string>
+    <string name="downloading">Descargando… puedes seguir, se guarda sola</string>
+    <string name="download_saving">Guardando en tu teléfono…</string>
+    <string name="in_library">¡Lista! Ya está en tus canciones</string>
+    <string name="download_failed">No se pudo descargar esta canción.</string>
+    <string name="download_retry">Intentar otra vez</string>
+    <string name="play_now">Reproducir ahora</string>
+    <string name="add_to_list">Agregar a una lista</string>
+
+    <!-- Mis canciones -->
+    <string name="songs_title">Mis canciones</string>
+    <string name="songs_empty">Todavía no tienes canciones. Busca la primera y guárdala aquí.</string>
+    <string name="songs_empty_action">Buscar canciones</string>
+    <string name="song_play_desc">Reproducir %1$s</string>
+    <string name="delete_song_confirm">¿Quieres borrar “%1$s”?</string>
+
+    <!-- Mis listas -->
+    <string name="playlists_title">Mis listas</string>
+    <string name="playlists_empty">Todavía no tienes listas. Crea la primera.</string>
+    <string name="new_playlist">Nueva lista</string>
+    <string name="playlist_name_hint">Nombre de la lista</string>
+    <string name="playlist_mic_desc">Decir el nombre de la lista</string>
+    <string name="play_all">Reproducir todo</string>
+    <string name="add_songs">Agregar canciones</string>
+    <string name="remove">Quitar</string>
+    <string name="remove_song_confirm">¿Quieres quitar “%1$s” de esta lista?</string>
+    <string name="delete_playlist">Borrar lista</string>
+    <string name="delete_playlist_confirm">¿Quieres borrar la lista “%1$s”?</string>
+    <string name="playlist_empty_songs">Esta lista está vacía. Agrega canciones.</string>
+    <string name="add_songs_title">Elige canciones</string>
+    <string name="add_selected">Agregar (%1$d)</string>
+    <string name="add_none">No hay más canciones para agregar.</string>
+    <string name="add_none_action">Buscar más canciones</string>
+    <string name="add_to_list_title">Agregar a una lista</string>
+    <string name="add_to_list_song">%1$s · %2$s</string>
+    <string name="added_to_list">Listo, se agregó a “%1$s”.</string>
+    <string name="add_to_list_empty">Todavía no tienes listas. Crea la primera.</string>
+
+    <!-- Cantar / Karaoke / Reproduciendo -->
+    <string name="sing_title">Cantar</string>
+    <string name="sing_empty">Todavía no hay canciones con letra.</string>
+    <string name="now_playing_title">Reproduciendo</string>
+    <string name="now_playing_progress">Avance de la canción</string>
+    <string name="now_playing_progress_spoken">%1$s de %2$s</string>
+    <string name="up_next">Sigue: %1$s</string>
+    <string name="nothing_playing">No hay nada sonando.</string>
+    <string name="karaoke_no_lyrics">Esta canción todavía no tiene letra</string>
+    <string name="karaoke_loading">Cargando letra…</string>
+
+    <!-- Ajustes -->
+    <string name="setup_title">Configuración inicial</string>
+    <string name="setup_intro">Esta pantalla es para quien ayuda con la app. Se hace una sola vez.</string>
+    <string name="server_url">Dirección del servidor</string>
+    <string name="app_token">Clave de la app</string>
+    <string name="pin_new_hint">PIN de 4 números</string>
+    <string name="setup_save">Guardar y empezar</string>
+    <string name="setup_error_url">La dirección debe empezar con http:// o https://</string>
+    <string name="setup_error_token">Escribe la clave de la app.</string>
+    <string name="setup_error_pin">El PIN debe tener 4 números.</string>
+    <string name="pin_title">Para quien ayuda</string>
+    <string name="pin_intro">Esta parte es para quien te ayuda con la app.</string>
+    <string name="pin_help">¿No sabes el número? Pregúntale a quien configuró la app.</string>
+    <string name="pin_prompt">Escribe el número secreto</string>
+    <string name="pin_enter">Entrar</string>
+    <string name="pin_wrong">Ese número no es correcto. Prueba otra vez.</string>
+    <string name="settings_title">Para quien ayuda</string>
+    <string name="change_pin">Cambiar PIN</string>
+    <string name="text_size_title">Tamaño de letra</string>
+    <string name="text_size_intro">Toca la letra que se ve mejor para ti.</string>
+    <string name="text_size_preview">Así se verá la letra.</string>
+    <string name="caregiver_entry">Para quien ayuda</string>
+    <string name="text_normal">Normal</string>
+    <string name="text_large">Grande</string>
+    <string name="text_xlarge">Muy grande</string>
+    <string name="sync_now">Sincronizar ahora</string>
+    <string name="syncing">Sincronizando…</string>
+    <string name="sync_done">Listo, todo está al día.</string>
+
+    <!-- Arranque -->
+    <string name="loading_preparing">Preparando tus canciones…</string>
+</resources>

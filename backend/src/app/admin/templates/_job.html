@@ -1,0 +1,7 @@
+{% if job.status.value in ('pending', 'downloading') %}
+<span hx-get="/admin/downloads/{{ job.id }}" hx-trigger="every 2s" hx-swap="outerHTML" class="muted">Descargando…</span>
+{% elif job.status.value == 'ready' %}
+<span class="ok">Listo: ya está en la biblioteca</span>
+{% else %}
+<span class="err">{{ job.error or 'Error al descargar' }}</span>
+{% endif %}

@@ -1,0 +1,1708 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Mi Musica API",
+    "description": "\nREST API of **Mi Musica**, a personal music and karaoke app.\n\n* Every endpoint except `/api/v1/health` requires `Authorization: Bearer <APP_TOKEN>`.\n* JSON uses snake_case; timestamps are ISO-8601 UTC; ids are UUID strings.\n* Errors are returned as `{\"detail\": \"...\"}`.\n",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/v1/health": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Health check",
+        "description": "Liveness probe. Public: it is the only endpoint that needs no credentials.",
+        "operationId": "health_api_v1_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                },
+                "example": {
+                  "status": "ok"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/search": {
+      "get": {
+        "tags": [
+          "search"
+        ],
+        "summary": "Search songs",
+        "description": "Searches for songs to download. `mode=title` searches by title/artist, `mode=lyrics` treats `q` as a fragment of the lyrics (falling back to a plain search when the lyrics service is unavailable) and `mode=auto` merges both, title matches first. Results already in the library have `in_library=true`.",
+        "operationId": "search_api_v1_search_get",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200,
+              "description": "Title, artist or lyrics fragment.",
+              "examples": [
+                "bohemian rhapsody"
+              ],
+              "title": "Q"
+            },
+            "description": "Title, artist or lyrics fragment."
+          },
+          {
+            "name": "mode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "auto",
+                "title",
+                "lyrics"
+              ],
+              "type": "string",
+              "description": "Search strategy.",
+              "default": "auto",
+              "title": "Mode"
+            },
+            "description": "Search strategy."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 20,
+              "minimum": 1,
+              "description": "Maximum number of results.",
+              "default": 5,
+              "title": "Limit"
+            },
+            "description": "Maximum number of results."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid bearer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/downloads": {
+      "post": {
+        "tags": [
+          "downloads"
+        ],
+        "summary": "Request a download",
+        "description": "Queues the download of a search result (audio + lyrics) and returns immediately with a job. Poll `GET /downloads/{id}` until `status` is `ready` or `failed`. Idempotent: if the song is already in the library a `ready` job pointing at it is returned.",
+        "operationId": "request_download_api_v1_downloads_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DownloadRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DownloadJob"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid bearer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/downloads/{job_id}": {
+      "get": {
+        "tags": [
+          "downloads"
+        ],
+        "summary": "Get download job status",
+        "description": "Returns the current state of a download job.",
+        "operationId": "get_download_api_v1_downloads__job_id__get",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DownloadJob"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid bearer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/library": {
+      "get": {
+        "tags": [
+          "library"
+        ],
+        "summary": "Library identity",
+        "description": "Returns the persistent id of this server's library. Clients use it before a sync to avoid deleting local data when they are pointed at a different (e.g. brand new) server.",
+        "operationId": "get_library_identity_api_v1_library_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LibraryIdentity"
+                },
+                "example": {
+                  "library_id": "3f2b8c1e9d4a4b6f8a7c5d2e1f0a9b8c"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid bearer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/songs": {
+      "get": {
+        "tags": [
+          "songs"
+        ],
+        "summary": "List songs",
+        "description": "Returns every song in the library, oldest first.",
+        "operationId": "list_songs_api_v1_songs_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SongList"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid bearer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/songs/{song_id}": {
+      "get": {
+        "tags": [
+          "songs"
+        ],
+        "summary": "Get a song",
+        "description": "Returns one song's metadata.",
+        "operationId": "get_song_api_v1_songs__song_id__get",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "song_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Song Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Song"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid bearer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "songs"
+        ],
+        "summary": "Edit a song",
+        "description": "Updates the title, artist and/or lyrics offset. Omitted fields are unchanged.",
+        "operationId": "patch_song_api_v1_songs__song_id__patch",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "song_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Song Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SongUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Song"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid bearer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "songs"
+        ],
+        "summary": "Delete a song",
+        "description": "Deletes the song, removes it from every playlist and deletes its audio file. This cannot be undone.",
+        "operationId": "delete_song_api_v1_songs__song_id__delete",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "song_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Song Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Missing or invalid bearer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/songs/{song_id}/audio": {
+      "get": {
+        "tags": [
+          "songs"
+        ],
+        "summary": "Download song audio",
+        "description": "Streams the audio file with its media type (for example `audio/mp4` for m4a). HTTP `Range` requests are supported so players can seek.",
+        "operationId": "get_audio_api_v1_songs__song_id__audio_get",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "song_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Song Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Full audio file.",
+            "content": {
+              "audio/mp4": {},
+              "audio/*": {}
+            }
+          },
+          "206": {
+            "description": "Partial audio (Range request).",
+            "content": {
+              "audio/*": {}
+            }
+          },
+          "401": {
+            "description": "Missing or invalid bearer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/songs/{song_id}/lyrics": {
+      "get": {
+        "tags": [
+          "songs"
+        ],
+        "summary": "Get song lyrics",
+        "description": "Returns synced (LRC) and plain lyrics (either may be null) plus the offset.",
+        "operationId": "get_lyrics_api_v1_songs__song_id__lyrics_get",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "song_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Song Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LyricsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid bearer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/songs/{song_id}/lyrics/refresh": {
+      "post": {
+        "tags": [
+          "songs"
+        ],
+        "summary": "Re-fetch lyrics",
+        "description": "Looks the lyrics up again at LRCLIB and replaces the stored ones.",
+        "operationId": "refresh_lyrics_api_v1_songs__song_id__lyrics_refresh_post",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "song_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Song Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LyricsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid bearer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Upstream service unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/playlists": {
+      "get": {
+        "tags": [
+          "playlists"
+        ],
+        "summary": "List playlists",
+        "description": "Returns all playlists with their ordered song ids.",
+        "operationId": "list_playlists_api_v1_playlists_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaylistList"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid bearer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "playlists"
+        ],
+        "summary": "Create a playlist",
+        "description": "Creates a playlist. Unknown song ids are rejected with 422.",
+        "operationId": "create_playlist_api_v1_playlists_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaylistCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Playlist"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid bearer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/playlists/{playlist_id}": {
+      "patch": {
+        "tags": [
+          "playlists"
+        ],
+        "summary": "Edit a playlist",
+        "description": "Renames the playlist and/or replaces its ordered song ids (use this to add, remove or reorder songs). Unknown song ids are rejected with 422.",
+        "operationId": "update_playlist_api_v1_playlists__playlist_id__patch",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "playlist_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Playlist Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaylistUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Playlist"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid bearer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "playlists"
+        ],
+        "summary": "Delete a playlist",
+        "description": "Deletes the playlist only; its songs stay in the library.",
+        "operationId": "delete_playlist_api_v1_playlists__playlist_id__delete",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "playlist_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Playlist Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Missing or invalid bearer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "DownloadJob": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Job id (UUID).",
+            "examples": [
+              "3f2b8c1e-9d4a-4b7e-8a51-0c2f6d9e1a77"
+            ]
+          },
+          "source_id": {
+            "type": "string",
+            "title": "Source Id",
+            "description": "Track being downloaded.",
+            "examples": [
+              "fJ9rUzIMcZQ"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "downloading",
+              "ready",
+              "failed"
+            ],
+            "title": "Status",
+            "description": "Job state. Poll until `ready` or `failed`.",
+            "examples": [
+              "pending"
+            ]
+          },
+          "song_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Song Id",
+            "description": "Library song id once `ready`.",
+            "examples": [
+              null
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error",
+            "description": "Readable reason when `failed`.",
+            "examples": [
+              null
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "Creation time (ISO-8601 UTC).",
+            "examples": [
+              "2026-11-07T18:30:00Z"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "source_id",
+          "status",
+          "song_id",
+          "error",
+          "created_at"
+        ],
+        "title": "DownloadJob"
+      },
+      "DownloadRequest": {
+        "properties": {
+          "source_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,64}$",
+            "title": "Source Id",
+            "description": "`source_id` from a search result.",
+            "examples": [
+              "fJ9rUzIMcZQ"
+            ]
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title",
+            "description": "Optional clean title (overrides the downloaded metadata).",
+            "examples": [
+              "Bohemian Rhapsody"
+            ]
+          },
+          "artist": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Artist",
+            "description": "Optional clean artist (overrides the downloaded metadata).",
+            "examples": [
+              "Queen"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "source_id"
+        ],
+        "title": "DownloadRequest"
+      },
+      "ErrorResponse": {
+        "properties": {
+          "detail": {
+            "type": "string",
+            "title": "Detail",
+            "description": "Human-readable error message.",
+            "examples": [
+              "Song not found"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "detail"
+        ],
+        "title": "ErrorResponse"
+      },
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "ok",
+            "title": "Status",
+            "description": "Always `ok` when the server is up.",
+            "examples": [
+              "ok"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "HealthResponse"
+      },
+      "LibraryIdentity": {
+        "properties": {
+          "library_id": {
+            "type": "string",
+            "title": "Library Id",
+            "description": "Random id generated when this server's database was created. It never changes for that database, and a new or empty database gets a different one. Clients compare it with the last id they saw to detect they are talking to a different library.",
+            "examples": [
+              "3f2b8c1e9d4a4b6f8a7c5d2e1f0a9b8c"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "library_id"
+        ],
+        "title": "LibraryIdentity"
+      },
+      "LyricsResponse": {
+        "properties": {
+          "synced_lrc": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Synced Lrc",
+            "description": "Time-synced lyrics in LRC format.",
+            "examples": [
+              "[00:12.30]Is this the real life?"
+            ]
+          },
+          "plain": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plain",
+            "description": "Plain lyrics.",
+            "examples": [
+              "Is this the real life?"
+            ]
+          },
+          "offset_ms": {
+            "type": "integer",
+            "title": "Offset Ms",
+            "description": "Song's lyrics offset in ms; positive shows lines earlier.",
+            "examples": [
+              0
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "synced_lrc",
+          "plain",
+          "offset_ms"
+        ],
+        "title": "LyricsResponse"
+      },
+      "Playlist": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Playlist id (UUID).",
+            "examples": [
+              "0a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Playlist name.",
+            "examples": [
+              "Morning"
+            ]
+          },
+          "song_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Song Ids",
+            "description": "Ordered song ids.",
+            "examples": [
+              [
+                "7b0e5f1a-2c3d-4e5f-9a8b-1c2d3e4f5a6b"
+              ]
+            ]
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At",
+            "description": "Last change (ISO-8601 UTC).",
+            "examples": [
+              "2026-11-07T18:40:00Z"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "song_ids",
+          "updated_at"
+        ],
+        "title": "Playlist"
+      },
+      "PlaylistCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Name",
+            "description": "Playlist name (1-80 chars).",
+            "examples": [
+              "Morning"
+            ]
+          },
+          "song_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 5000,
+            "title": "Song Ids",
+            "description": "Initial ordered song ids.",
+            "examples": [
+              [
+                "7b0e5f1a-2c3d-4e5f-9a8b-1c2d3e4f5a6b"
+              ]
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "PlaylistCreate"
+      },
+      "PlaylistList": {
+        "properties": {
+          "playlists": {
+            "items": {
+              "$ref": "#/components/schemas/Playlist"
+            },
+            "type": "array",
+            "title": "Playlists",
+            "description": "All playlists."
+          }
+        },
+        "type": "object",
+        "required": [
+          "playlists"
+        ],
+        "title": "PlaylistList"
+      },
+      "PlaylistUpdate": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "New name (1-80 chars).",
+            "examples": [
+              "Evening"
+            ]
+          },
+          "song_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "maxItems": 5000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Song Ids",
+            "description": "Replaces the ordered song ids.",
+            "examples": [
+              [
+                "7b0e5f1a-2c3d-4e5f-9a8b-1c2d3e4f5a6b"
+              ]
+            ]
+          }
+        },
+        "type": "object",
+        "title": "PlaylistUpdate"
+      },
+      "SearchResponse": {
+        "properties": {
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/SearchResult"
+            },
+            "type": "array",
+            "title": "Results",
+            "description": "At most `limit` results, best first."
+          }
+        },
+        "type": "object",
+        "required": [
+          "results"
+        ],
+        "title": "SearchResponse"
+      },
+      "SearchResult": {
+        "properties": {
+          "source_id": {
+            "type": "string",
+            "title": "Source Id",
+            "description": "Opaque id of the track at the music source.",
+            "examples": [
+              "fJ9rUzIMcZQ"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "description": "Track title.",
+            "examples": [
+              "Bohemian Rhapsody"
+            ]
+          },
+          "artist": {
+            "type": "string",
+            "title": "Artist",
+            "description": "Artist name(s).",
+            "examples": [
+              "Queen"
+            ]
+          },
+          "album": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Album",
+            "description": "Album name, if known.",
+            "examples": [
+              "A Night at the Opera"
+            ]
+          },
+          "duration_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Seconds",
+            "description": "Track length in seconds.",
+            "examples": [
+              355
+            ]
+          },
+          "thumbnail_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thumbnail Url",
+            "description": "Cover image URL.",
+            "examples": [
+              "https://img.example/c.jpg"
+            ]
+          },
+          "match": {
+            "type": "string",
+            "enum": [
+              "title",
+              "lyrics"
+            ],
+            "title": "Match",
+            "description": "How this result was found: by title/artist or by a lyrics fragment.",
+            "examples": [
+              "title"
+            ]
+          },
+          "in_library": {
+            "type": "boolean",
+            "title": "In Library",
+            "description": "True when the song is already downloaded.",
+            "examples": [
+              false
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "source_id",
+          "title",
+          "artist",
+          "album",
+          "duration_seconds",
+          "thumbnail_url",
+          "match",
+          "in_library"
+        ],
+        "title": "SearchResult"
+      },
+      "Song": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Song id (UUID).",
+            "examples": [
+              "7b0e5f1a-2c3d-4e5f-9a8b-1c2d3e4f5a6b"
+            ]
+          },
+          "source_id": {
+            "type": "string",
+            "title": "Source Id",
+            "description": "Id at the music source.",
+            "examples": [
+              "fJ9rUzIMcZQ"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "description": "Song title.",
+            "examples": [
+              "Bohemian Rhapsody"
+            ]
+          },
+          "artist": {
+            "type": "string",
+            "title": "Artist",
+            "description": "Artist name(s).",
+            "examples": [
+              "Queen"
+            ]
+          },
+          "duration_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Seconds",
+            "description": "Length in seconds.",
+            "examples": [
+              355
+            ]
+          },
+          "thumbnail_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thumbnail Url",
+            "description": "Cover image URL.",
+            "examples": [
+              "https://img.example/c.jpg"
+            ]
+          },
+          "has_synced_lyrics": {
+            "type": "boolean",
+            "title": "Has Synced Lyrics",
+            "description": "True if time-synced (LRC) lyrics exist.",
+            "examples": [
+              true
+            ]
+          },
+          "has_plain_lyrics": {
+            "type": "boolean",
+            "title": "Has Plain Lyrics",
+            "description": "True if plain lyrics exist.",
+            "examples": [
+              true
+            ]
+          },
+          "lyrics_offset_ms": {
+            "type": "integer",
+            "title": "Lyrics Offset Ms",
+            "description": "Shift applied to the synced lyrics, LRC convention: positive shows lines earlier, negative shows them later.",
+            "examples": [
+              0
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "When the song was added (ISO-8601 UTC).",
+            "examples": [
+              "2026-11-07T18:31:12Z"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "source_id",
+          "title",
+          "artist",
+          "duration_seconds",
+          "thumbnail_url",
+          "has_synced_lyrics",
+          "has_plain_lyrics",
+          "lyrics_offset_ms",
+          "created_at"
+        ],
+        "title": "Song"
+      },
+      "SongList": {
+        "properties": {
+          "songs": {
+            "items": {
+              "$ref": "#/components/schemas/Song"
+            },
+            "type": "array",
+            "title": "Songs",
+            "description": "All songs in the library."
+          }
+        },
+        "type": "object",
+        "required": [
+          "songs"
+        ],
+        "title": "SongList"
+      },
+      "SongUpdate": {
+        "properties": {
+          "title": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title",
+            "description": "New title.",
+            "examples": [
+              "Bohemian Rhapsody"
+            ]
+          },
+          "artist": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Artist",
+            "description": "New artist.",
+            "examples": [
+              "Queen"
+            ]
+          },
+          "lyrics_offset_ms": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 600000.0,
+                "minimum": -600000.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lyrics Offset Ms",
+            "description": "New lyrics offset in ms (-600000..600000); positive shows lines earlier.",
+            "examples": [
+              250
+            ]
+          }
+        },
+        "type": "object",
+        "title": "SongUpdate"
+      }
+    },
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "description": "Static device token configured as `APP_TOKEN` on the server.",
+        "scheme": "bearer"
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "health",
+      "description": "Liveness probe."
+    },
+    {
+      "name": "search",
+      "description": "Find songs by title, artist or lyrics fragment."
+    },
+    {
+      "name": "downloads",
+      "description": "Asynchronous download jobs (audio + lyrics)."
+    },
+    {
+      "name": "library",
+      "description": "Identity of this server's library."
+    },
+    {
+      "name": "songs",
+      "description": "The song library, audio streaming and lyrics."
+    },
+    {
+      "name": "playlists",
+      "description": "Ordered playlists of library songs."
+    }
+  ]
+}

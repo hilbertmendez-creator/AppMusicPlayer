@@ -1,0 +1,30 @@
+{% if not results %}
+  <p class="muted">{% if query %}No se encontraron resultados para «{{ query }}».{% else %}Escribe algo para buscar.{% endif %}</p>
+{% endif %}
+{% for r in results %}
+<div class="card">
+  <div class="row" style="justify-content:space-between">
+    <div>
+      <strong>{{ r.title }}</strong> — {{ r.artist }}
+      {% if r.match == 'lyrics' %}<span class="badge">Coincide por letra</span>{% endif %}
+      <div class="muted">
+        {% if r.album %}{{ r.album }} · {% endif %}
+        {% if r.duration_seconds %}{{ r.duration_seconds // 60 }}:{{ '%02d' % (r.duration_seconds % 60) }}{% endif %}
+      </div>
+    </div>
+    <div>
+      {% if r.in_library %}
+        <span class="ok">Ya está en la biblioteca</span>
+      {% else %}
+        <form hx-post="/admin/downloads" hx-target="#job-{{ r.source_id }}" hx-swap="innerHTML">
+          <input type="hidden" name="source_id" value="{{ r.source_id }}">
+          <input type="hidden" name="title" value="{{ r.title }}">
+          <input type="hidden" name="artist" value="{{ r.artist }}">
+          <button type="submit">Descargar</button>
+        </form>
+        <div id="job-{{ r.source_id }}"></div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endfor %}
