@@ -5,7 +5,6 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -40,7 +39,9 @@ import com.mimusica.app.ui.songs.SongsScreen
 import com.mimusica.app.ui.songs.SongsViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 
 @Composable
 fun SetupRoute(vm: SettingsViewModel, onDone: () -> Unit) {
@@ -66,10 +67,13 @@ fun HomeRoute(
     val mini = playback.currentSong?.let { MiniPlayerUi(it.title, it.artist, playback.isPlaying, it.thumbnailUrl) }
     // The library is resolved off the main thread (it may still be warming up), so Home's first frame never
     // waits for Room. Until the first counts arrive the tiles simply show no subtitle.
-    val summary by produceState<HomeSummary?>(initialValue = null, container) {
-        val library = withContext(Dispatchers.Default) { container.library }
-        combine(library.observeDownloadedSongs(), library.observePlaylists(), ::homeSummary).collect { value = it }
+    val summaryFlow = remember(container) {
+        flow<HomeSummary?> {
+            val library = container.library
+            emitAll(combine(library.observeDownloadedSongs(), library.observePlaylists(), ::homeSummary))
+        }.flowOn(Dispatchers.Default)
     }
+    val summary by summaryFlow.collectAsStateWithLifecycle(initialValue = null)
     HomeScreen(
         miniPlayer = mini,
         summary = summary,
