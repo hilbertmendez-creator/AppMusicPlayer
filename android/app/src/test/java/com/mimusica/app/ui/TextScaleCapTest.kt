@@ -16,8 +16,8 @@ class TextScaleCapTest {
     }
 
     @Test
-    fun `app 1_4 times os 1_3 is capped to 1_6`() {
-        assertEquals(1.6f, effectiveTextScale(appFactor = 1.4f, osFontScale = 1.3f), delta)
+    fun `app 1_2 times os 1_5 is capped to 1_6`() {
+        assertEquals(1.6f, effectiveTextScale(appFactor = 1.2f, osFontScale = 1.5f), delta)
     }
 
     @Test
@@ -32,10 +32,10 @@ class TextScaleCapTest {
 
     @Test
     fun `in-app choice is preserved whenever the product stays under the cap`() {
-        listOf(1.0f, 1.2f, 1.4f).forEach { app ->
+        listOf(0.8f, 1.0f, 1.2f).forEach { app ->
             assertEquals(app, effectiveTextScale(app, osFontScale = 1.0f), delta)
         }
-        assertEquals(1.4f * 1.1f, effectiveTextScale(1.4f, 1.1f), delta)
+        assertEquals(1.2f * 1.1f, effectiveTextScale(1.2f, 1.1f), delta)
     }
 
     @Test
@@ -46,7 +46,7 @@ class TextScaleCapTest {
 
     @Test
     fun `the OS scale handed to the density never exceeds what the cap allows`() {
-        listOf(1.0f, 1.2f, 1.4f).forEach { app ->
+        listOf(0.8f, 1.0f, 1.2f).forEach { app ->
             listOf(0.85f, 1.0f, 1.15f, 1.3f, 1.5f, 1.82f, 2.0f).forEach { os ->
                 val capped = cappedOsFontScale(app, os)
                 assertTrue("capped must not exceed the OS scale", capped <= os + delta)
@@ -56,16 +56,16 @@ class TextScaleCapTest {
     }
 
     @Test
-    fun `the worst case 1_4 x 1_82 is brought down to 1_6`() {
-        assertEquals(1.6f, effectiveTextScale(1.4f, 1.82f), delta)
+    fun `the worst case 1_2 x 2_0 is brought down to 1_6`() {
+        assertEquals(1.6f, effectiveTextScale(1.2f, 2.0f), delta)
     }
 
     @Test
     fun `a preview row is capped for its own factor, not for the one in use`() {
         // The "Muy grande" row is drawn while "Normal" is active and the phone's font size is at its largest.
-        val previewScale = 1.4f * cappedOsFontScale(appFactor = 1.4f, osFontScale = 2.0f)
+        val previewScale = 1.2f * cappedOsFontScale(appFactor = 1.2f, osFontScale = 2.0f)
         assertEquals(MaxCombinedTextScale, previewScale, delta)
-        // Capping it for the active factor (1.0) instead would have drawn it at 1.4 x 1.6 = 2.24.
-        assertTrue(1.4f * cappedOsFontScale(appFactor = 1.0f, osFontScale = 2.0f) > MaxCombinedTextScale)
+        // Capping it for the active factor (0.8) instead would have drawn it at 1.2 x 2.0 = 2.4.
+        assertTrue(1.2f * cappedOsFontScale(appFactor = 0.8f, osFontScale = 2.0f) > MaxCombinedTextScale)
     }
 }

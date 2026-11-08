@@ -6,9 +6,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -20,12 +22,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.mimusica.app.R
 import com.mimusica.app.domain.model.Song
 import com.mimusica.app.ui.components.Artwork
 import com.mimusica.app.ui.components.BigButton
+import com.mimusica.app.ui.components.BigIconButton
 import com.mimusica.app.ui.components.ConfirmDeleteDialog
 import com.mimusica.app.ui.components.DangerOutlineButton
 import com.mimusica.app.ui.components.EmptyMessage
@@ -55,7 +60,13 @@ fun SongsScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     deletedTitle: String? = null,
+    query: String = "",
+    onQueryChange: (String) -> Unit = {},
+    onMic: () -> Unit = {},
+    micMessage: Boolean = false,
 ) {
+    // [songs] is the whole library; what is shown (and what [onPlay] indexes into) is the filtered list.
+    val shown = filterSongs(songs, query)
     var pendingDelete by remember { mutableStateOf<Song?>(null) }
     ScreenScaffold(
         title = stringResource(R.string.songs_title),
@@ -75,13 +86,25 @@ fun SongsScreen(
             )
         }
         if (songs.size >= 2) {
+            SongsFilter(query, onQueryChange, onMic)
+            if (micMessage) MessageBanner(stringResource(R.string.mic_unavailable))
+        }
+        if (songs.size >= 2 && shown.isEmpty()) {
+            EmptyMessage(
+                text = stringResource(R.string.songs_filter_none),
+                actionText = stringResource(R.string.songs_filter_clear),
+                onAction = { onQueryChange("") },
+                live = true,
+            )
+        }
+        if (shown.size >= 2) {
             Text(
-                pluralStringResource(R.plurals.song_count, songs.size, songs.size),
+                pluralStringResource(R.plurals.song_count, shown.size, shown.size),
                 style = MaterialTheme.typography.titleMedium,
             )
-            BigButton(stringResource(R.string.play_all), { onPlayAll(songs) }, icon = Icons.Filled.PlayArrow)
+            BigButton(stringResource(R.string.play_all), { onPlayAll(shown) }, icon = Icons.Filled.PlayArrow)
         }
-        songs.forEachIndexed { index, song ->
+        shown.forEachIndexed { index, song ->
             SongCard(
                 song = song,
                 onPlay = { onPlay(index) },
@@ -98,6 +121,35 @@ fun SongsScreen(
                 onDelete(song)
             },
             onDismiss = { pendingDelete = null },
+        )
+    }
+}
+
+/** One big field and a round microphone beside it: type or say part of a title or a singer. */
+@Composable
+private fun SongsFilter(query: String, onQueryChange: (String) -> Unit, onMic: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        OutlinedTextField(
+            value = query,
+            onValueChange = { onQueryChange(it.replace('\n', ' ').replace('\r', ' ')) },
+            modifier = Modifier
+                .weight(1f)
+                .heightIn(min = 72.dp),
+            textStyle = MaterialTheme.typography.titleMedium,
+            label = { Text(stringResource(R.string.songs_filter_label), style = MaterialTheme.typography.bodyLarge) },
+            placeholder = { Text(stringResource(R.string.songs_filter_hint), style = MaterialTheme.typography.bodyLarge) },
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+            singleLine = true,
+        )
+        BigIconButton(
+            icon = Icons.Filled.Mic,
+            description = stringResource(R.string.songs_filter_mic_desc),
+            onClick = onMic,
+            size = 72.dp,
         )
     }
 }

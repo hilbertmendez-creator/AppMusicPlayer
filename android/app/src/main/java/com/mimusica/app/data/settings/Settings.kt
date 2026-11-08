@@ -13,9 +13,9 @@ import kotlinx.coroutines.flow.map
 import java.security.MessageDigest
 
 enum class TextScale(val factor: Float) {
-    NORMAL(1.0f),
-    LARGE(1.2f),
-    EXTRA_LARGE(1.4f),
+    NORMAL(0.8f),
+    LARGE(1.0f),
+    EXTRA_LARGE(1.2f),
 }
 
 data class AppSettings(

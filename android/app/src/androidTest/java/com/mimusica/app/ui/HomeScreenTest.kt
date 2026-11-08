@@ -9,6 +9,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertDoesNotExist
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertWidthIsAtLeast
@@ -107,6 +108,18 @@ class HomeScreenTest {
         show(mini = MiniPlayerUi("Volver", "Gardel", isPlaying = true))
         compose.onNodeWithText("Sonando ahora").assertIsDisplayed()
         compose.onNodeWithText("Volver").assertIsDisplayed()
+    }
+
+    @Test
+    fun miniPlayerShowsHowFarTheSongHasGone() {
+        show(mini = MiniPlayerUi("Volver", "Gardel", isPlaying = true, positionMs = 65_000, durationMs = 220_000))
+        compose.onNodeWithText("1:05 / 3:40", useUnmergedTree = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun miniPlayerHidesProgressUntilTheLengthIsKnown() {
+        show(mini = MiniPlayerUi("Volver", "Gardel", isPlaying = true, positionMs = 0, durationMs = 0))
+        compose.onNodeWithText("0:00 / 0:00", useUnmergedTree = true).assertDoesNotExist()
     }
 
     // --- Step 2: live subtitles ---------------------------------------------------------------------------

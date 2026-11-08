@@ -106,7 +106,7 @@ const val MaxCombinedTextScale = 1.6f
 /**
  * The OS font scale to hand to [LocalDensity] so that in-app [appFactor] x it never exceeds
  * [MaxCombinedTextScale]. It only ever lowers the OS value, so the in-app choice survives whenever the product
- * is already within the cap (e.g. app 1.4 at OS 1.0 stays 1.4).
+ * is already within the cap (e.g. app 1.2 at OS 1.0 stays 1.2).
  */
 fun cappedOsFontScale(appFactor: Float, osFontScale: Float): Float =
     osFontScale.coerceAtMost(MaxCombinedTextScale / appFactor.coerceAtLeast(0.01f))
@@ -124,7 +124,7 @@ val LocalOsFontScale = staticCompositionLocalOf { 1f }
 @Composable
 fun MiMusicaTheme(textScale: TextScale = TextScale.NORMAL, content: @Composable () -> Unit) {
     // The typography already multiplies sp by the in-app factor, and the OS font scale multiplies it again at
-    // draw time. Capping the OS part keeps the worst case (1.4 x 1.82) from breaking every layout.
+    // draw time. Capping the OS part keeps the worst case (1.2 x 2.0) from breaking every layout.
     val density = LocalDensity.current
     val osScale = cappedOsFontScale(textScale.factor, density.fontScale)
     val cappedDensity = if (osScale == density.fontScale) density else Density(density.density, osScale)

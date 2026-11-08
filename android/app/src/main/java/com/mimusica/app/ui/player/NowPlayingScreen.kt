@@ -407,10 +407,13 @@ private fun VolumeKey(icon: ImageVector, description: String, onClick: () -> Uni
     }
 }
 
-/** Progress bar plus "1:05 / 3:40"; TalkBack gets one stop: "Avance de la canción, 1:05 de 3:40". */
+/**
+ * Progress bar plus "1:05 / 3:40"; TalkBack gets one stop: "Avance de la canción, 1:05 de 3:40".
+ * Shared by the player screen and the "Sonando ahora" card on Home.
+ */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-private fun ProgressBlock(positionMs: Long, durationMs: Long) {
+fun ProgressBlock(positionMs: Long, durationMs: Long, modifier: Modifier = Modifier) {
     val fraction = (positionMs.toFloat() / durationMs).coerceIn(0f, 1f)
     val spoken = stringResource(
         R.string.now_playing_progress_spoken,
@@ -418,7 +421,7 @@ private fun ProgressBlock(positionMs: Long, durationMs: Long) {
         formatDuration(durationMs),
     )
     val label = stringResource(R.string.now_playing_progress)
-    Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         LinearProgressIndicator(
             progress = { fraction },
             color = ProgressFill,

@@ -9,6 +9,7 @@ import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performClick
@@ -76,6 +77,16 @@ class SearchScreenTest {
         compose.onNodeWithText("Canción, cantante o letra").assertIsDisplayed()
         compose.onNodeWithText("Hablar").assertHeightIsAtLeast(64.dp)
         compose.onNodeWithText("Volver").assertHeightIsAtLeast(64.dp)
+    }
+
+    @Test
+    fun hablarAndBuscarSitSideBySideAtTheSameHeight() {
+        show(SearchUiState())
+        // The header title is also "Buscar": the button is the last node with that text.
+        val hablar = compose.onNodeWithText("Hablar").getUnclippedBoundsInRoot()
+        val buscar = compose.onAllNodesWithText("Buscar").onLast().getUnclippedBoundsInRoot()
+        assertTrue("Buscar must sit to the right of Hablar", buscar.left >= hablar.right)
+        assertTrue("both share one row", buscar.top < hablar.bottom && hablar.top < buscar.bottom)
     }
 
     @Test
