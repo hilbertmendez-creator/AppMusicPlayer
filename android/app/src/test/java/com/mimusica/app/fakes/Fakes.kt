@@ -80,7 +80,8 @@ class FakeScheduler : DownloadScheduler {
 class FakeStorage : AudioStorage {
     val files = mutableSetOf<String>()
     val deleted = mutableListOf<String>()
-    override fun fileFor(songId: String): File = File("/fake/$songId.m4a")
+    override fun fileFor(songId: String, extension: String): File = File("/fake/$songId.$extension")
+    override fun find(songId: String): File? = if (songId in files) File("/fake/$songId.m4a") else null
     override fun exists(songId: String): Boolean = songId in files
     override fun delete(songId: String) {
         files -= songId
@@ -96,6 +97,8 @@ class FakeSyncState(var id: String? = null) : SyncStateStore {
 }
 
 class FakeRemote : MusicRemote {
+    /** Media type the fake server reports for downloaded audio; null simulates a missing Content-Type. */
+    var audioMediaType: String? = "audio/mp4"
     /** Identity the fake server reports; null simulates an older server without the endpoint. */
     var libraryId: String? = "lib-1"
     var songs: MutableList<Song> = mutableListOf()
@@ -146,11 +149,12 @@ class FakeRemote : MusicRemote {
         check()
         return lyricsBySong[songId] ?: Lyrics(null, null, 0)
     }
-    override suspend fun downloadAudio(songId: String, target: File) {
+    override suspend fun downloadAudio(songId: String, target: File): String? {
         check()
         audioTarget = target
         target.parentFile?.mkdirs()
         target.writeBytes(byteArrayOf(1, 2, 3))
+        return audioMediaType
     }
     override suspend fun listPlaylists(): List<Playlist> {
         check()

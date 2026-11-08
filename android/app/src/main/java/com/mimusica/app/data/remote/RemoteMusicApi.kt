@@ -43,14 +43,13 @@ class RemoteMusicApi(private val service: MusicApiService) : MusicRemote {
 
     override suspend fun getLyrics(songId: String): Lyrics = call { service.getLyrics(songId).toDomain() }
 
-    override suspend fun downloadAudio(songId: String, target: File) {
-        call {
-            service.getAudio(songId).use { body ->
-                withContext(Dispatchers.IO) {
-                    target.parentFile?.mkdirs()
-                    target.outputStream().use { out -> body.byteStream().copyTo(out) }
-                }
+    override suspend fun downloadAudio(songId: String, target: File): String? = call {
+        service.getAudio(songId).use { body ->
+            withContext(Dispatchers.IO) {
+                target.parentFile?.mkdirs()
+                target.outputStream().use { out -> body.byteStream().copyTo(out) }
             }
+            body.contentType()?.let { "${it.type}/${it.subtype}" }
         }
     }
 

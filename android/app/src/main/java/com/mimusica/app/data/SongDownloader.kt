@@ -16,23 +16,23 @@ class SongDownloader(
         if (songDao.getById(songId) == null) {
             songDao.upsert(listOf(remote.getSong(songId).toEntity(audioPath = null)))
         }
-        val target = storage.fileFor(songId)
-        if (!target.exists() || target.length() == 0L) {
-            fetchAudio(songId, target)
-        }
+        val audio = storage.find(songId) ?: fetchAudio(songId)
         val lyrics = remote.getLyrics(songId)
         songDao.upsertLyrics(LyricsEntity(songId, lyrics.syncedLrc, lyrics.plain, lyrics.offsetMs))
-        songDao.setAudioPath(songId, target.absolutePath)
+        songDao.setAudioPath(songId, audio.absolutePath)
     }
 
-    private suspend fun fetchAudio(songId: String, target: File) {
-        val part = File(target.path + ".part")
+    /** Downloads to a temporary file, then names it after the format the server really sent. */
+    private suspend fun fetchAudio(songId: String): File {
+        val part = storage.fileFor(songId, AudioStorage.PART_EXTENSION)
         try {
-            remote.downloadAudio(songId, part)
+            val mediaType = remote.downloadAudio(songId, part)
+            val target = storage.fileFor(songId, AudioFormat.extensionFor(mediaType))
             if (!part.renameTo(target)) {
                 part.copyTo(target, overwrite = true)
                 part.delete()
             }
+            return target
         } catch (e: Throwable) {
             part.delete()
             throw e

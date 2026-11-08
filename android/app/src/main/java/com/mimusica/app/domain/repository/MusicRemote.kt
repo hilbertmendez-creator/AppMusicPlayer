@@ -21,7 +21,8 @@ interface MusicRemote {
     suspend fun getSong(id: String): Song
     suspend fun deleteSong(id: String)
     suspend fun getLyrics(songId: String): Lyrics
-    suspend fun downloadAudio(songId: String, target: File)
+    /** Saves the song's audio into [target] and returns the media type the server reported, if any. */
+    suspend fun downloadAudio(songId: String, target: File): String?
     suspend fun listPlaylists(): List<Playlist>
     suspend fun createPlaylist(name: String, songIds: List<String> = emptyList()): Playlist
     suspend fun updatePlaylist(id: String, name: String? = null, songIds: List<String>? = null): Playlist

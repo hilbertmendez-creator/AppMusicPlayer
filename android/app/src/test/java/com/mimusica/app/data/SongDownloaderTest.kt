@@ -8,6 +8,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -18,13 +19,7 @@ class SongDownloaderTest {
     @get:Rule
     val tmp = TemporaryFolder()
 
-    private class TempStorage(private val dir: File) : AudioStorage {
-        override fun fileFor(songId: String) = File(dir, "$songId.m4a")
-        override fun exists(songId: String) = fileFor(songId).exists()
-        override fun delete(songId: String) {
-            fileFor(songId).delete()
-        }
-    }
+    private fun storage(dir: File) = FileAudioStorage(dir)
 
     @Test
     fun `downloads audio and lyrics then marks the song available`() = runTest {
@@ -33,22 +28,67 @@ class SongDownloaderTest {
             lyricsBySong["a"] = Lyrics("[00:01.00]hola", null, 10)
         }
         val dao = FakeSongDao()
-        val storage = TempStorage(tmp.newFolder())
+        val storage = storage(tmp.newFolder())
         val downloader = SongDownloader(remote, dao, storage)
 
         downloader.download("a")
 
         assertTrue(storage.exists("a"))
-        assertEquals(storage.fileFor("a").absolutePath, dao.getById("a")!!.audioPath)
+        assertEquals(storage.fileFor("a", "m4a").absolutePath, dao.getById("a")!!.audioPath)
         assertEquals("[00:01.00]hola", dao.getLyrics("a")!!.syncedLrc)
-        assertFalse(File(storage.fileFor("a").path + ".part").exists())
+        assertFalse(storage.fileFor("a", AudioStorage.PART_EXTENSION).exists())
+    }
+
+    @Test
+    fun `saves the audio with the real extension the server reports`() = runTest {
+        val remote = FakeRemote().apply {
+            songs += song("a")
+            audioMediaType = "audio/webm"
+        }
+        val dao = FakeSongDao()
+        val storage = storage(tmp.newFolder())
+
+        SongDownloader(remote, dao, storage).download("a")
+
+        val path = dao.getById("a")!!.audioPath!!
+        assertEquals("a.webm", File(path).name)
+        assertTrue(File(path).exists())
+        assertFalse(storage.fileFor("a", "m4a").exists())
+        assertFalse(storage.fileFor("a", AudioStorage.PART_EXTENSION).exists())
+    }
+
+    @Test
+    fun `saves as m4a when the server sends no media type`() = runTest {
+        val remote = FakeRemote().apply {
+            songs += song("a")
+            audioMediaType = null
+        }
+        val dao = FakeSongDao()
+        val storage = storage(tmp.newFolder())
+
+        SongDownloader(remote, dao, storage).download("a")
+
+        assertEquals("a.m4a", File(dao.getById("a")!!.audioPath!!).name)
+    }
+
+    @Test
+    fun `does not download again when the song is already saved in another format`() = runTest {
+        val remote = FakeRemote().apply { songs += song("a") }
+        val dao = FakeSongDao()
+        val storage = storage(tmp.newFolder())
+        storage.fileFor("a", "webm").writeBytes(byteArrayOf(9))
+
+        SongDownloader(remote, dao, storage).download("a")
+
+        assertNull(remote.audioTarget)
+        assertEquals("a.webm", File(dao.getById("a")!!.audioPath!!).name)
     }
 
     @Test
     fun `failed audio download leaves no partial file and song unavailable`() = runTest {
         val remote = FakeRemote().apply { songs += song("a") }
         val dao = FakeSongDao()
-        val storage = TempStorage(tmp.newFolder())
+        val storage = storage(tmp.newFolder())
         val downloader = SongDownloader(remote, dao, storage)
         remote.failure = java.io.IOException("boom")
 
