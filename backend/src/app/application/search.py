@@ -13,6 +13,9 @@ log = logging.getLogger(__name__)
 
 SearchMode = Literal["auto", "title", "lyrics"]
 
+# Queries with at least this many words are treated as a remembered lyric line.
+LYRIC_FRAGMENT_MIN_WORDS = 5
+
 
 class SearchSongs:
     def __init__(
@@ -31,12 +34,27 @@ class SearchSongs:
         elif mode == "lyrics":
             found = self._by_lyrics(query, limit, fallback=True)
         else:
-            found = self._by_title(query, limit)
-            if self._lyrics_search is not None:
-                found += self._by_lyrics(query, limit, fallback=False)
+            found = self._auto(query, limit)
         unique = self._dedupe(found)[:limit]
         present = self._library.source_ids_in_library([r.source_id for r in unique])
         return [replace(r, in_library=r.source_id in present) for r in unique]
+
+    def _auto(self, query: str, limit: int) -> list[SearchResult]:
+        """Interleave title and lyrics matches so neither list can crowd out the other.
+
+        A long query is most likely a remembered lyric line, so lyrics matches lead;
+        a short one is most likely a title or artist, so title matches lead.
+        """
+        by_title = self._by_title(query, limit)
+        if self._lyrics_search is None:
+            return by_title
+        by_lyrics = self._by_lyrics(query, limit, fallback=False)
+        lyrics_first = len(query.split()) >= LYRIC_FRAGMENT_MIN_WORDS
+        first, second = (by_lyrics, by_title) if lyrics_first else (by_title, by_lyrics)
+        merged: list[SearchResult] = []
+        for i in range(max(len(first), len(second))):
+            merged += first[i : i + 1] + second[i : i + 1]
+        return merged
 
     def _by_title(self, query: str, limit: int) -> list[SearchResult]:
         return [replace(r, match="title") for r in self._music.search(query, limit)]

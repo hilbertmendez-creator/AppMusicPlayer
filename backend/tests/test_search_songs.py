@@ -19,22 +19,35 @@ def test_title_mode_tags_title_and_skips_lyrics_search(music, repo, lyrics_searc
     assert lyrics_search.calls == []
 
 
-def test_auto_merges_dedupes_and_puts_title_matches_first(music, repo):
-    music.catalog["some words"] = [result("t1"), result("dup")]
-    music.catalog["Song X Artist X"] = [result("dup")]
+def test_auto_short_query_interleaves_starting_with_title_and_dedupes(music, repo):
+    music.catalog["some words"] = [result("t1"), result("t2")]
+    music.catalog["Song X Artist X"] = [result("t2")]
     music.catalog["Song Z Artist Z"] = [result("l1")]
     ls = FakeLyricsSearch([TrackHint("Song X", "Artist X"), TrackHint("Song Z", "Artist Z")])
     out = make(music, repo, ls).execute("some words", "auto", 5)
-    assert [r.source_id for r in out] == ["t1", "dup", "l1"]
-    assert [r.match for r in out] == ["title", "title", "lyrics"]
+    assert [r.source_id for r in out] == ["t1", "t2", "l1"]
+    assert [r.match for r in out] == ["title", "lyrics", "lyrics"]
 
 
-def test_auto_caps_at_limit(music, repo):
+def test_auto_caps_at_limit_without_starving_lyrics_matches(music, repo):
     music.catalog["q"] = [result("a"), result("b"), result("c")]
     music.catalog["S A"] = [result("d")]
     ls = FakeLyricsSearch([TrackHint("S", "A")])
     out = make(music, repo, ls).execute("q", "auto", 3)
-    assert [r.source_id for r in out] == ["a", "b", "c"]
+    assert [r.source_id for r in out] == ["a", "d", "b"]
+
+
+def test_auto_long_fragment_puts_lyrics_matches_first(music, repo):
+    # Real case: a remembered lyric line (with keyboard-added accents) makes the
+    # title search return 5 unrelated songs; the lyrics match must still show up.
+    fragment = "cómo si fuera está noche la última vez"
+    music.catalog[fragment] = [result(f"noise{i}") for i in range(5)]
+    music.catalog["Bésame Mucho Consuelo Velázquez"] = [result("besame")]
+    ls = FakeLyricsSearch([TrackHint("Bésame Mucho", "Consuelo Velázquez")])
+    out = make(music, repo, ls).execute(fragment, "auto", 5)
+    assert out[0].source_id == "besame"
+    assert out[0].match == "lyrics"
+    assert len(out) == 5
 
 
 def test_auto_without_lyrics_search_is_just_title_search(music, repo):
