@@ -23,9 +23,19 @@ interface DownloadScheduler {
 
 /** Where audio files live on the device. */
 interface AudioStorage {
-    fun fileFor(songId: String): File
+    /** Where the audio of [songId] goes once its real format ([extension]) is known. */
+    fun fileFor(songId: String, extension: String): File
+
+    /** The saved, non-empty audio file of [songId] in any format, or null when there is none. */
+    fun find(songId: String): File?
     fun exists(songId: String): Boolean
+    /** Removes every file of [songId], including an unfinished download. */
     fun delete(songId: String)
+
+    companion object {
+        /** Extension of a download in progress, before the real format is known. */
+        const val PART_EXTENSION = "part"
+    }
 }
 
 /** Remembers which server library this phone last synced with. */
