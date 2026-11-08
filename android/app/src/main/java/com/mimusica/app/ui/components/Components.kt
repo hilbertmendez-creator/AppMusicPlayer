@@ -534,11 +534,13 @@ fun TagChip(text: String, modifier: Modifier = Modifier) {
 /** Card container used for list rows: a slightly lighter surface with the outline kept. */
 @Composable
 fun RowCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
+    // A 2dp dark outline plus a soft shadow: white cards on a pale page must read as separate pieces at a glance.
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        border = BorderStroke(2.dp, MaterialTheme.colorScheme.outline),
+        shadowElevation = 4.dp,
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp), content = content)
     }
@@ -598,6 +600,46 @@ fun PrimaryWithSecondary(
             layout(width, primary.height + gapPx + secondary.height) {
                 primary.placeRelative(0, 0)
                 secondary.placeRelative(width - secondaryNatural, primary.height + gapPx)
+            }
+        }
+    }
+}
+
+/**
+ * Two buttons of the same weight side by side, each half the width and the same height ("Hablar" + "Buscar").
+ * When the text is too large for a word to fit in half the width (or the screen is too narrow) they stack,
+ * [first] on top, so a label never breaks mid-word.
+ */
+@Composable
+fun TwoUp(
+    first: @Composable () -> Unit,
+    second: @Composable () -> Unit,
+    modifier: Modifier = Modifier,
+    gap: Dp = 12.dp,
+) {
+    Layout(content = { first(); second() }, modifier = modifier.fillMaxWidth()) { measurables, constraints ->
+        val width = constraints.maxWidth
+        val gapPx = gap.roundToPx()
+        val half = (width - gapPx) / 2
+        val a = measurables[0]
+        val b = measurables[1]
+        val sideBySide = a.minIntrinsicWidth(Constraints.Infinity) <= half && b.minIntrinsicWidth(Constraints.Infinity) <= half
+        if (sideBySide) {
+            // Intrinsic heights (a child may only be measured once): both buttons get the taller one's height.
+            val height = maxOf(a.minIntrinsicHeight(half), b.minIntrinsicHeight(half))
+            val pa = a.measure(Constraints(minWidth = half, maxWidth = half, minHeight = height, maxHeight = height))
+            val pb = b.measure(Constraints(minWidth = half, maxWidth = half, minHeight = height, maxHeight = height))
+            val h = maxOf(pa.height, pb.height)
+            layout(width, h) {
+                pa.placeRelative(0, 0)
+                pb.placeRelative(half + gapPx, 0)
+            }
+        } else {
+            val pa = a.measure(Constraints.fixedWidth(width))
+            val pb = b.measure(Constraints.fixedWidth(width))
+            layout(width, pa.height + gapPx + pb.height) {
+                pa.placeRelative(0, 0)
+                pb.placeRelative(0, pa.height + gapPx)
             }
         }
     }

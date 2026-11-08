@@ -94,7 +94,9 @@ class SearchViewModel(
         searchJob = viewModelScope.launch {
             runCatchingUi { remote.search(query, mode = "auto", limit = MAX_RESULTS) }
                 .onSuccess { results ->
-                    val items = results.take(MAX_RESULTS).map { resolve(SearchItem(it, initialState(it))) }
+                    val items = results.take(MAX_RESULTS)
+                        .map { resolve(SearchItem(it, initialState(it))) }
+                        .let(::downloadedFirst)
                     _uiState.update { it.copy(isSearching = false, hasSearched = true, items = items) }
                 }
                 .onFailure { e ->
@@ -145,6 +147,13 @@ class SearchViewModel(
         library.addDownloadedSong(songId)
         return songId
     }
+
+    /**
+     * Songs already playable on this phone go first; the rest keep the server's order. Applied once, when the
+     * results arrive: cards never reshuffle later (e.g. when a download finishes) under the user's finger.
+     */
+    private fun downloadedFirst(items: List<SearchItem>): List<SearchItem> =
+        items.sortedByDescending { it.song != null } // sortedBy is stable
 
     private fun initialState(result: SearchResult): DownloadState =
         if (result.inLibrary) DownloadState.InLibrary else DownloadState.NotDownloaded

@@ -43,7 +43,6 @@ import com.mimusica.app.domain.model.MatchType
 import com.mimusica.app.domain.model.Song
 import com.mimusica.app.ui.components.Artwork
 import com.mimusica.app.ui.components.BigButton
-import com.mimusica.app.ui.components.BigButtonHeight
 import com.mimusica.app.ui.components.OutlineBigButton
 import com.mimusica.app.ui.components.EmptyMessage
 import com.mimusica.app.ui.components.ErrorBanner
@@ -57,6 +56,7 @@ import com.mimusica.app.ui.components.ScreenScaffold
 import com.mimusica.app.ui.components.SectionAccents
 import com.mimusica.app.ui.components.StatusPill
 import com.mimusica.app.ui.components.TagChip
+import com.mimusica.app.ui.components.TwoUp
 
 /** Presentational "Buscar": one big field, a very large microphone button and at most 5 result cards. */
 @Composable
@@ -103,20 +103,27 @@ fun SearchScreen(
             keyboardActions = KeyboardActions(onSearch = { submit() }),
             minLines = 2,
         )
-        BigButton(
-            text = stringResource(R.string.search_mic),
-            onClick = onMic,
-            icon = Icons.Filled.Mic,
-            minHeight = 104.dp,
-            description = stringResource(R.string.search_mic_desc),
-        )
-        // Secondary to "Hablar": outlined, never green (green means success only).
-        OutlineBigButton(
-            text = stringResource(R.string.search_button),
-            onClick = submit,
-            icon = Icons.Filled.Search,
-            minHeight = BigButtonHeight,
-            color = MaterialTheme.colorScheme.primary,
+        // Same weight, same height, side by side: say it or type it. "Hablar" is the filled one;
+        // "Buscar" is outlined, never green (green means success only).
+        TwoUp(
+            first = {
+                BigButton(
+                    text = stringResource(R.string.search_mic),
+                    onClick = onMic,
+                    icon = Icons.Filled.Mic,
+                    minHeight = 104.dp,
+                    description = stringResource(R.string.search_mic_desc),
+                )
+            },
+            second = {
+                OutlineBigButton(
+                    text = stringResource(R.string.search_button),
+                    onClick = submit,
+                    icon = Icons.Filled.Search,
+                    minHeight = 104.dp,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            },
         )
         if (micMessage) MessageBanner(stringResource(R.string.mic_unavailable))
         state.error?.let { ErrorBanner(it) }
@@ -125,13 +132,18 @@ fun SearchScreen(
             state.hasSearched && state.items.isEmpty() && state.error == null ->
                 EmptyMessage(stringResource(R.string.search_no_results), live = true)
         }
-        state.items.forEach { item ->
-            ResultCard(
-                item = item,
-                onDownload = { onDownload(item.result.sourceId) },
-                onPlayNow = onPlayNow,
-                onAddToList = onAddToList,
-            )
+        if (state.items.isNotEmpty()) {
+            // A little more air between cards than between other blocks, so where one ends is obvious.
+            Column(verticalArrangement = Arrangement.spacedBy(24.dp)) {
+                state.items.forEach { item ->
+                    ResultCard(
+                        item = item,
+                        onDownload = { onDownload(item.result.sourceId) },
+                        onPlayNow = onPlayNow,
+                        onAddToList = onAddToList,
+                    )
+                }
+            }
         }
     }
 }

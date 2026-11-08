@@ -48,6 +48,7 @@ import com.mimusica.app.R
 import com.mimusica.app.ui.components.Artwork
 import com.mimusica.app.ui.components.BigIconButton
 import com.mimusica.app.ui.components.MinTouch
+import com.mimusica.app.ui.player.ProgressBlock
 import com.mimusica.app.ui.theme.MiMusicaTheme
 import com.mimusica.app.ui.components.SectionAccent
 import com.mimusica.app.ui.components.SectionAccents
@@ -58,6 +59,9 @@ data class MiniPlayerUi(
     val artist: String,
     val isPlaying: Boolean,
     val thumbnailUrl: String? = null,
+    /** Where the song is and how long it lasts; the progress line shows only once the length is known. */
+    val positionMs: Long = 0L,
+    val durationMs: Long = 0L,
 )
 
 private val HomeGap = 16.dp
@@ -69,7 +73,7 @@ private val HeaderReserve = 72.dp
  * Room kept for the mini player whether or not it is showing, so the four tiles are the same height and
  * stay put when a song starts (big targets that move under a finger are hard to hit). Fits a two-line title.
  */
-private val MiniPlayerReserve = 144.dp
+private val MiniPlayerReserve = 192.dp
 private val TileMinHeight = 104.dp
 private val TileMaxHeight = 168.dp
 
@@ -266,39 +270,44 @@ fun MiniPlayerBar(state: MiniPlayerUi, onOpen: () -> Unit, onToggle: () -> Unit,
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(2.dp, MaterialTheme.colorScheme.outline),
     ) {
-        Row(
+        Column(
             modifier = Modifier.padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            // Decorative: the card is already named by the title and artist next to it.
-            Artwork(url = state.thumbnailUrl, size = 68.dp, decorative = true)
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    stringResource(R.string.mini_player_now),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.outline,
-                )
-                Text(
-                    state.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    state.artist,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.outline,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                // Decorative: the card is already named by the title and artist next to it.
+                Artwork(url = state.thumbnailUrl, size = 68.dp, decorative = true)
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        stringResource(R.string.mini_player_now),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.outline,
+                    )
+                    Text(
+                        state.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        state.artist,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.outline,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                BigIconButton(
+                    icon = if (state.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                    description = stringResource(if (state.isPlaying) R.string.pause else R.string.play),
+                    onClick = onToggle,
+                    size = 72.dp,
                 )
             }
-            BigIconButton(
-                icon = if (state.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                description = stringResource(if (state.isPlaying) R.string.pause else R.string.play),
-                onClick = onToggle,
-                size = 72.dp,
-            )
+            if (state.durationMs > 0) ProgressBlock(state.positionMs, state.durationMs)
         }
     }
 }

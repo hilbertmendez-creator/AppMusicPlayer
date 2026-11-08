@@ -89,6 +89,11 @@
     <string name="delete_song_confirm">¿Quieres borrar “%1$s”?</string>
     <string name="delete_song_note">Podrás volver a descargarla desde Buscar.</string>
     <string name="song_deleted">Se borró «%1$s».</string>
+    <string name="songs_filter_label">Buscar en mis canciones</string>
+    <string name="songs_filter_hint">Escribe el nombre o el cantante</string>
+    <string name="songs_filter_mic_desc">Hablar para buscar en mis canciones</string>
+    <string name="songs_filter_none">No hay canciones con esas palabras.</string>
+    <string name="songs_filter_clear">Borrar lo escrito</string>
 
     <!-- Mis listas -->
     <string name="playlists_title">Mis listas</string>

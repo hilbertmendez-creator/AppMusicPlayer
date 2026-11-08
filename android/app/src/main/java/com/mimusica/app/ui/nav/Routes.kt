@@ -36,6 +36,7 @@ import com.mimusica.app.ui.settings.TextSizeScreen
 import com.mimusica.app.ui.sing.SingScreen
 import com.mimusica.app.ui.components.rememberSpeechInput
 import com.mimusica.app.ui.songs.SongsScreen
+import com.mimusica.app.ui.songs.filterSongs
 import com.mimusica.app.ui.songs.SongsViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.combine
@@ -64,7 +65,7 @@ fun HomeRoute(
     val container = LocalAppContainer.current
     val player = container.player
     val playback by player.state.collectAsStateWithLifecycle()
-    val mini = playback.currentSong?.let { MiniPlayerUi(it.title, it.artist, playback.isPlaying, it.thumbnailUrl) }
+    val mini = playback.currentSong?.let { MiniPlayerUi(it.title, it.artist, playback.isPlaying, it.thumbnailUrl, playback.positionMs, playback.durationMs) }
     // The library is resolved off the main thread (it may still be warming up), so Home's first frame never
     // waits for Room. Until the first counts arrive the tiles simply show no subtitle.
     val summaryFlow = remember(container) {
@@ -171,12 +172,26 @@ fun SongsRoute(
     val player = LocalAppContainer.current.player
     // The ViewModel is shared by the whole activity: forget "Se borró «…»." when leaving this screen.
     DisposableEffect(vm) { onDispose { vm.clearNotice() } }
+    var query by rememberSaveable { mutableStateOf("") }
+    var micUnavailable by remember { mutableStateOf(false) }
+    val startSpeech = rememberSpeechInput(
+        onResult = {
+            micUnavailable = false
+            query = it
+        },
+        onUnavailable = { micUnavailable = true },
+    )
     SongsScreen(
         songs = state.songs,
         error = state.error,
         deletedTitle = state.deletedTitle,
+        query = query,
+        onQueryChange = { query = it },
+        onMic = startSpeech,
+        micMessage = micUnavailable,
         onPlay = { index ->
-            player.play(state.songs, index)
+            // The card index is into what the screen shows, i.e. the filtered list.
+            player.play(filterSongs(state.songs, query), index)
             onPlayerOpen()
         },
         onPlayAll = { songs ->

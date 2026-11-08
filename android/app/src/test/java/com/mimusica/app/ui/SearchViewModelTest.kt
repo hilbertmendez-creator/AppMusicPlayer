@@ -184,6 +184,37 @@ class SearchViewModelTest {
     }
 
     @Test
+    fun `songs already on the phone come first and the rest keep their order`() = runTest {
+        songDao.upsert(listOf(song("lib9").toEntity("/songs/lib9.m4a")))
+        remote.searchResults = listOf(result("s1"), result("src-lib9", inLibrary = true), result("s3"))
+        vm.onQueryChange("x")
+        vm.search()
+        advanceUntilIdle()
+
+        assertEquals(
+            listOf("src-lib9", "s1", "s3"),
+            vm.uiState.value.items.map { it.result.sourceId },
+        )
+    }
+
+    @Test
+    fun `a download that finishes later does not reshuffle the cards`() = runTest {
+        remote.songs += song("lib1")
+        remote.searchResults = listOf(result("s1"), result("s2"))
+        remote.jobs.add(job(DownloadStatus.READY, "lib1"))
+        vm.onQueryChange("x")
+        vm.search()
+        advanceUntilIdle()
+
+        vm.download("s2")
+        advanceUntilIdle()
+        songDao.setAudioPath("lib1", "/songs/lib1.m4a")
+        advanceUntilIdle()
+
+        assertEquals(listOf("s1", "s2"), vm.uiState.value.items.map { it.result.sourceId })
+    }
+
+    @Test
     fun `a failed job has no specific reason`() = runTest {
         remote.searchResults = listOf(result("s1"))
         remote.jobs.add(job(DownloadStatus.FAILED))
