@@ -1,9 +1,17 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
+}
+
+// Release signing credentials live outside the repo; without them the release build is unsigned.
+val releaseSigningProps = Properties().apply {
+    val file = File(System.getProperty("user.home"), ".android-keystores/mimusica-release.properties")
+    if (file.exists()) file.inputStream().use { load(it) }
 }
 
 android {
@@ -20,11 +28,23 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        if (releaseSigningProps.getProperty("storeFile") != null) {
+            create("release") {
+                storeFile = file(releaseSigningProps.getProperty("storeFile"))
+                storePassword = releaseSigningProps.getProperty("storePassword")
+                keyAlias = releaseSigningProps.getProperty("keyAlias")
+                keyPassword = releaseSigningProps.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         debug {
             applicationIdSuffix = ".debug"
         }
         release {
+            signingConfig = signingConfigs.findByName("release")
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
