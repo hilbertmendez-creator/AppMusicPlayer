@@ -1,0 +1,95 @@
+name: Release Android
+
+# Builds a signed APK on every push to main that touches the Android app and publishes it as a GitHub Release.
+# The app checks "releases/latest" on start and offers the update. Never trigger this on pull_request:
+# it reads the signing secrets.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "android/**"
+      - ".github/workflows/release-android.yml"
+
+concurrency:
+  group: release-android
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Signed APK + GitHub Release
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: android
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compute versionCode
+        # Android only installs an update when versionCode is higher than the installed one (1 today), and it
+        # must grow on every build. The offset keeps the first release above any hand-built APK.
+        run: echo "VERSION_CODE=$((100 + GITHUB_RUN_NUMBER))" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Restore signing key from secrets
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          for name in KEYSTORE_BASE64 KEYSTORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Missing repository secret ANDROID_${name}. A release without the signing key would not install over the current app."
+              exit 1
+            fi
+          done
+          keystore="$RUNNER_TEMP/release.jks"
+          echo "$KEYSTORE_BASE64" | base64 --decode > "$keystore"
+          # Same place build.gradle.kts already reads from on the developer's machine.
+          mkdir -p "$HOME/.android-keystores"
+          {
+            printf 'storeFile=%s\n' "$keystore"
+            printf 'storePassword=%s\n' "$KEYSTORE_PASSWORD"
+            printf 'keyAlias=%s\n' "$KEY_ALIAS"
+            printf 'keyPassword=%s\n' "$KEY_PASSWORD"
+          } > "$HOME/.android-keystores/mimusica-release.properties"
+
+      - name: Unit tests and signed release build
+        run: ./gradlew testDebugUnitTest assembleRelease -PversionCode="$VERSION_CODE" --console=plain
+
+      - name: Check the APK is signed and show the key fingerprint
+        run: |
+          apksigner="$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)apksigner"
+          # Compare this SHA-256 with the key of the app installed on the phone: they must match.
+          "$apksigner" verify --print-certs app/build/outputs/apk/release/app-release.apk
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="build-$VERSION_CODE"
+          cp app/build/outputs/apk/release/app-release.apk MiMusica.apk
+          if gh release view "$tag" >/dev/null 2>&1; then
+            # Re-run of the same workflow run: replace the file instead of failing.
+            gh release upload "$tag" MiMusica.apk --clobber
+          else
+            gh release create "$tag" MiMusica.apk \
+              --target "$GITHUB_SHA" \
+              --title "Mi Música build $VERSION_CODE" \
+              --notes "Automatic build of commit $GITHUB_SHA." \
+              --latest
+          fi
+
+      - name: Remove signing key
+        if: always()
+        run: |
+          rm -f "$RUNNER_TEMP/release.jks" "$HOME/.android-keystores/mimusica-release.properties"

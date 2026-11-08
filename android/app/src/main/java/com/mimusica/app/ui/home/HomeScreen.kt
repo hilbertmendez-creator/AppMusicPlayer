@@ -45,6 +45,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.mimusica.app.R
+import com.mimusica.app.data.update.UpdateState
 import com.mimusica.app.ui.components.Artwork
 import com.mimusica.app.ui.components.BigIconButton
 import com.mimusica.app.ui.components.MinTouch
@@ -97,6 +98,8 @@ fun HomeScreen(
     onMiniToggle: () -> Unit,
     modifier: Modifier = Modifier,
     summary: HomeSummary? = null,
+    updateState: UpdateState = UpdateState.None,
+    onUpdate: () -> Unit = {},
 ) {
     // Null summary = still loading: no subtitle rather than a wrong "Todavía no tienes canciones".
     val songsSubtitle = summary?.let {
@@ -135,6 +138,9 @@ fun HomeScreen(
                     )
                     TextSizeButton(onClick = onSettings)
                 }
+                if (updateState !is UpdateState.None) {
+                    UpdateBanner(updateState, onClick = onUpdate)
+                }
                 // Full-width tiles (one per row) so labels never break mid-word; the list scrolls when the
                 // text is so large that the four tiles no longer fit.
                 Column(
@@ -156,6 +162,40 @@ fun HomeScreen(
                     MiniPlayerBar(miniPlayer, onOpen = onMiniPlayer, onToggle = onMiniToggle)
                 }
             }
+        }
+    }
+}
+
+/**
+ * Big, plain "new version" card above the tiles: says what is happening in two short lines and is one tap to
+ * act. While the file downloads it is not clickable (a second tap would start a second download).
+ */
+@Composable
+private fun UpdateBanner(state: UpdateState, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val busy = state is UpdateState.Downloading
+    val title = stringResource(
+        when (state) {
+            is UpdateState.Downloading -> R.string.update_downloading
+            is UpdateState.Failed -> R.string.update_failed
+            else -> R.string.update_available
+        },
+    )
+    val hint = stringResource(if (busy) R.string.update_wait else R.string.update_tap)
+    Surface(
+        onClick = onClick,
+        enabled = !busy,
+        modifier = modifier
+            .fillMaxWidth()
+            .heightIn(min = MinTouch)
+            .semantics { role = Role.Button },
+        shape = RoundedCornerShape(28.dp),
+        color = MaterialTheme.colorScheme.surface,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        border = BorderStroke(2.dp, MaterialTheme.colorScheme.outline),
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
+            Text(title, style = MaterialTheme.typography.titleLarge)
+            Text(hint, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.outline)
         }
     }
 }
