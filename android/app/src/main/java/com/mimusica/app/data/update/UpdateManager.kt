@@ -41,11 +41,6 @@ class UpdateManager(
             .build()
     }
 
-    // The redirect itself carries the answer (its Location header), so it must not be followed.
-    private val noRedirectClient: OkHttpClient by lazy {
-        client.newBuilder().followRedirects(false).followSslRedirects(false).build()
-    }
-
     private val _state = MutableStateFlow<UpdateState>(UpdateState.None)
     val state: StateFlow<UpdateState> = _state.asStateFlow()
 
@@ -104,10 +99,7 @@ class UpdateManager(
         }
     }
 
-    /** The API first; if it refuses (rate limit, no answer) the public "latest" page, which has no such limit. */
-    private fun fetchLatest(): AppUpdate? = fetchFromApi() ?: fetchFromLatestPage()
-
-    private fun fetchFromApi(): AppUpdate? = try {
+    private fun fetchLatest(): AppUpdate? = try {
         val request = Request.Builder()
             .url(UpdateParser.LATEST_RELEASE_URL)
             .header("Accept", "application/vnd.github+json")
@@ -117,18 +109,7 @@ class UpdateManager(
         }
     } catch (e: CancellationException) {
         throw e
-    } catch (_: Exception) {
-        null
-    }
-
-    private fun fetchFromLatestPage(): AppUpdate? = try {
-        val request = Request.Builder().url(UpdateParser.LATEST_PAGE_URL).build()
-        noRedirectClient.newCall(request).execute().use { response ->
-            UpdateParser.parseLatestRedirect(response.header("Location"))
-        }
-    } catch (e: CancellationException) {
-        throw e
-    } catch (_: Exception) {
+    } catch (_: IOException) {
         null
     }
 
