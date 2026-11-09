@@ -44,6 +44,25 @@ class UpdateManager(
     private val _state = MutableStateFlow<UpdateState>(UpdateState.None)
     val state: StateFlow<UpdateState> = _state.asStateFlow()
 
+    private val _check = MutableStateFlow<UpdateCheck>(if (enabled) UpdateCheck.Idle else UpdateCheck.NotChecked)
+
+    /** Outcome of the check asked for in Ajustes; [UpdateCheck.NotChecked] for builds that never look for updates. */
+    val check: StateFlow<UpdateCheck> = _check.asStateFlow()
+
+    /** "Buscar actualización": looks now and reports every outcome. A second tap while checking does nothing. */
+    fun checkNow() {
+        if (!enabled || _check.value is UpdateCheck.Checking) return
+        _check.value = UpdateCheck.Checking
+        scope.launch {
+            val found = withContext(Dispatchers.IO) { fetchLatest() }
+            val result = UpdateParser.checkResult(found, currentVersionCode)
+            _check.value = result
+            if (result is UpdateCheck.Available && _state.value is UpdateState.None) {
+                _state.value = UpdateState.Available(result.update)
+            }
+        }
+    }
+
     fun checkOnStart() {
         if (!enabled) return
         scope.launch {

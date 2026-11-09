@@ -1,6 +1,7 @@
 package com.mimusica.app.ui
 
 import com.mimusica.app.data.settings.AppSettings
+import com.mimusica.app.data.settings.FontChoice
 import com.mimusica.app.data.settings.PinHasher
 import com.mimusica.app.data.settings.SettingsStore
 import com.mimusica.app.data.settings.TextScale
@@ -35,6 +36,9 @@ class SettingsViewModelTest {
         }
         override suspend fun saveTextScale(scale: TextScale) {
             state.value = state.value.copy(textScale = scale)
+        }
+        override suspend fun saveFontChoice(choice: FontChoice) {
+            state.value = state.value.copy(fontChoice = choice)
         }
     }
 
@@ -120,6 +124,19 @@ class SettingsViewModelTest {
         vm.setTextScale(TextScale.EXTRA_LARGE)
         advanceUntilIdle()
         assertEquals(TextScale.EXTRA_LARGE, store.state.value.textScale)
+    }
+
+    @Test
+    fun `font choice is persisted and exposed`() = runTest {
+        val vm = SettingsViewModel(store, sync = {})
+        advanceUntilIdle()
+        assertEquals(FontChoice.ATKINSON, vm.uiState.value.settings.fontChoice)
+
+        vm.setFontChoice(FontChoice.ANDIKA)
+        advanceUntilIdle()
+
+        assertEquals(FontChoice.ANDIKA, store.state.value.fontChoice)
+        assertEquals(FontChoice.ANDIKA, vm.uiState.value.settings.fontChoice)
     }
 
     @Test

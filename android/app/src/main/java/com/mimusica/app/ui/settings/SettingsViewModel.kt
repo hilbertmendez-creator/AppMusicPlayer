@@ -3,6 +3,7 @@ package com.mimusica.app.ui.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mimusica.app.data.settings.AppSettings
+import com.mimusica.app.data.settings.FontChoice
 import com.mimusica.app.data.settings.PinHasher
 import com.mimusica.app.data.settings.SettingsStore
 import com.mimusica.app.data.settings.TextScale
@@ -119,6 +120,10 @@ class SettingsViewModel(
 
     fun setTextScale(scale: TextScale) {
         viewModelScope.launch { store.saveTextScale(scale) }
+    }
+
+    fun setFontChoice(choice: FontChoice) {
+        viewModelScope.launch { store.saveFontChoice(choice) }
     }
 
     fun syncNow() {

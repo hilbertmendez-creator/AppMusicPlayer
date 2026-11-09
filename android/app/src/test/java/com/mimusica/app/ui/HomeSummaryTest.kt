@@ -22,6 +22,14 @@ class HomeSummaryTest {
     fun `singable counts songs with synced or plain lyrics only`() {
         val songs = listOf(song("1", synced = true), song("2", plain = true), song("3"))
         val summary = homeSummary(songs, listOf(Playlist("p", "Mix", emptyList())))
-        assertEquals(HomeSummary(songs = 3, playlists = 1, singable = 2), summary)
+        assertEquals(HomeSummary(songs = 3, playlists = 1, singable = 2, continueSong = songs[0]), summary)
+    }
+
+    @Test
+    fun `the hero song is the loaded one, then the last sung, then the first singable`() {
+        val songs = listOf(song("1", synced = true), song("2", plain = true), song("3"))
+        assertEquals(songs[1], homeSummary(songs, emptyList(), currentSongId = "2", lastSungSongId = "1").continueSong)
+        assertEquals(songs[1], homeSummary(songs, emptyList(), currentSongId = "3", lastSungSongId = "2").continueSong)
+        assertEquals(songs[0], homeSummary(songs, emptyList()).continueSong)
     }
 }

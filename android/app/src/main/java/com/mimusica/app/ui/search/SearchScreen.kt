@@ -69,8 +69,9 @@ fun SearchScreen(
     onDownload: (String) -> Unit,
     onPlayNow: (Song) -> Unit,
     onAddToList: (Song) -> Unit,
-    onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    /** Null when Buscar is open as a tab: nothing to go back to. */
+    onBack: (() -> Unit)? = null,
 ) {
     val keyboard = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current

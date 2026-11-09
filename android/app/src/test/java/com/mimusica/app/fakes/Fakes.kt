@@ -96,6 +96,15 @@ class FakeSyncState(var id: String? = null) : SyncStateStore {
     }
 }
 
+class FakeLastSung(initial: String? = null) : com.mimusica.app.data.LastSungStore {
+    private val state = MutableStateFlow(initial)
+    val value: String? get() = state.value
+    override val lastSungSongId: Flow<String?> = state
+    override suspend fun setLastSungSongId(id: String) {
+        state.value = id
+    }
+}
+
 class FakeRemote : MusicRemote {
     /** Media type the fake server reports for downloaded audio; null simulates a missing Content-Type. */
     var audioMediaType: String? = "audio/mp4"

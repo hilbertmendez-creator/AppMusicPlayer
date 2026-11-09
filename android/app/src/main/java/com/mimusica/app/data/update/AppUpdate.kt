@@ -15,6 +15,19 @@ sealed interface UpdateState {
     data class Failed(val update: AppUpdate) : UpdateState
 }
 
+/**
+ * Result of the check the person asks for in Ajustes ("Buscar actualización"). [NotChecked] is a build that does
+ * not look for updates (debug): it must never be shown as "up to date".
+ */
+sealed interface UpdateCheck {
+    data object Idle : UpdateCheck
+    data object Checking : UpdateCheck
+    data object UpToDate : UpdateCheck
+    data class Available(val update: AppUpdate) : UpdateCheck
+    data object Failed : UpdateCheck
+    data object NotChecked : UpdateCheck
+}
+
 @Serializable
 private data class ReleaseDto(
     @SerialName("tag_name") val tagName: String = "",
@@ -58,4 +71,11 @@ object UpdateParser {
     /** [update] only if it is strictly newer than the installed build; Android refuses same-or-older installs. */
     fun newerThan(update: AppUpdate?, currentVersionCode: Int): AppUpdate? =
         update?.takeIf { it.versionCode > currentVersionCode }
+
+    /** Null [latest] means the lookup itself failed (no internet, bad answer): never "up to date". */
+    fun checkResult(latest: AppUpdate?, currentVersionCode: Int): UpdateCheck = when {
+        latest == null -> UpdateCheck.Failed
+        latest.versionCode > currentVersionCode -> UpdateCheck.Available(latest)
+        else -> UpdateCheck.UpToDate
+    }
 }

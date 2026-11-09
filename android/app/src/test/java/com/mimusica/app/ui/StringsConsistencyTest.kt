@@ -39,6 +39,46 @@ class StringsConsistencyTest {
     }
 
     @Test
+    fun `ajustes copy is present and the old text size screen copy is gone`() {
+        assertEquals("Ajustes", strings["ajustes_title"])
+        assertEquals("Fuente de la app", strings["font_section"])
+        assertEquals("Cambiar fuente", strings["font_change"])
+        assertEquals("Listo", strings["font_done"])
+        assertEquals("Acerca de", strings["about_title"])
+        assertEquals("Versión %1\$s", strings["about_version"])
+        assertEquals("Buscar actualización", strings["update_check"])
+        assertEquals("Ya tienes la última versión", strings["update_up_to_date"])
+        assertFalse(strings.containsKey("text_size_intro"))
+        assertFalse(strings.containsKey("text_size_preview"))
+    }
+
+    @Test
+    fun `navigation shell copy is present`() {
+        assertEquals("Inicio", strings["tab_home"])
+        assertEquals("Buscar", strings["tab_search"])
+        assertEquals("Cantar", strings["tab_sing"])
+        assertEquals("Ajustes", strings["tab_settings"])
+        assertEquals("Secciones", strings["tabs_label"])
+        assertEquals("%1\$s, pestaña actual", strings["tab_current"])
+        assertEquals("Seguir cantando", strings["continue_singing"])
+        assertEquals("Todavía no hay canciones con letra", strings["continue_singing_none"])
+        assertEquals("Cantar con la letra", strings["sing_with_lyrics"])
+        assertEquals("Seguir", strings["resume"])
+        assertEquals("Sonando", strings["mini_player_playing"])
+        assertEquals("En pausa", strings["mini_player_paused"])
+        assertTrue(strings.containsKey("mini_player_open_titled"))
+    }
+
+    @Test
+    fun `strings of removed controls are gone`() {
+        listOf(
+            "home_text_size_desc", "home_search", "home_sing", "home_search_subtitle",
+            "home_sing_count", "home_sing_none", "volume", "volume_level", "volume_state", "volume_up",
+            "volume_down", "now_playing_restart", "mini_player_now", "mini_player_open",
+        ).forEach { assertFalse("$it should be removed", strings.containsKey(it)) }
+    }
+
+    @Test
     fun `karaoke strings that used to be hardcoded live in strings xml`() {
         assertEquals("%1\$s · %2\$s", strings["karaoke_title_artist"])
         assertEquals("♪", strings["karaoke_rest_mark"])

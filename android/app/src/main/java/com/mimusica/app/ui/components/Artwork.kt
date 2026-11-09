@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil.compose.SubcomposeAsyncImage
 import com.mimusica.app.R
+import com.mimusica.app.ui.theme.CoverBg
 
 /**
  * Cover image with a fixed [size]; a music-note placeholder when there is no URL or it fails to load.
@@ -26,20 +27,26 @@ import com.mimusica.app.R
  * instead of announcing "Portada de la canción" on every row.
  */
 @Composable
-fun Artwork(url: String?, size: Dp, modifier: Modifier = Modifier, decorative: Boolean = false) {
-    ArtworkFill(url = url, modifier = modifier.size(size), decorative = decorative)
+fun Artwork(
+    url: String?,
+    size: Dp,
+    modifier: Modifier = Modifier,
+    decorative: Boolean = false,
+    corner: Dp = 12.dp,
+) {
+    ArtworkFill(url = url, modifier = modifier.size(size), decorative = decorative, corner = corner)
 }
 
 /** Cover image that fills whatever square its parent gives it (used where the size depends on free space). */
 @Composable
-fun ArtworkFill(url: String?, modifier: Modifier = Modifier, decorative: Boolean = false) {
-    val shape = RoundedCornerShape(12.dp)
+fun ArtworkFill(url: String?, modifier: Modifier = Modifier, decorative: Boolean = false, corner: Dp = 12.dp) {
+    val shape = RoundedCornerShape(corner)
     val description = if (decorative) null else stringResource(R.string.cover_art)
     val placeholder: @Composable () -> Unit = {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.primaryContainer),
+                .background(CoverBg),
             contentAlignment = Alignment.Center,
         ) {
             Icon(

@@ -5,6 +5,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.room.Room
 import com.mimusica.app.data.AudioStorage
 import com.mimusica.app.data.FileAudioStorage
+import com.mimusica.app.data.LastSungStore
 import com.mimusica.app.data.LibraryRepository
 import com.mimusica.app.data.SongDownloader
 import com.mimusica.app.data.SyncStateStore
@@ -35,6 +36,7 @@ class AppContainer(private val app: Application) {
     private val dataStoreSettings = DataStoreSettingsStore(app)
     val settingsStore: SettingsStore = dataStoreSettings
     private val syncState: SyncStateStore = dataStoreSettings
+    val lastSung: LastSungStore = dataStoreSettings
 
     private val connection = ConnectionConfig()
     private val database: AppDatabase by lazy {

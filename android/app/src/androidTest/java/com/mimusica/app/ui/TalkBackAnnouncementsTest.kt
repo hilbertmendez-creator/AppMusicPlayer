@@ -9,8 +9,10 @@ import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performScrollTo
 import com.mimusica.app.data.settings.TextScale
 import com.mimusica.app.domain.model.LyricLine
 import com.mimusica.app.domain.model.Playlist
@@ -24,7 +26,9 @@ import com.mimusica.app.ui.player.NowPlayingScreen
 import com.mimusica.app.ui.playlists.PlaylistDetailScreen
 import com.mimusica.app.ui.search.SearchScreen
 import com.mimusica.app.ui.search.SearchUiState
-import com.mimusica.app.ui.settings.TextSizeScreen
+import com.mimusica.app.data.settings.FontChoice
+import com.mimusica.app.ui.settings.AboutUpdateUi
+import com.mimusica.app.ui.settings.AjustesScreen
 import com.mimusica.app.ui.songs.SongsScreen
 import com.mimusica.app.ui.theme.MiMusicaTheme
 import org.junit.Assert.assertEquals
@@ -62,7 +66,7 @@ class TalkBackAnnouncementsTest {
             MiMusicaTheme {
                 NowPlayingScreen(
                     state = playing, onToggle = {}, onNext = {}, onPrevious = {},
-                    onVolumeUp = {}, onVolumeDown = {}, onRestart = {}, onSing = {}, onBack = {},
+                    onSing = {}, onBack = {},
                 )
             }
         }
@@ -82,31 +86,35 @@ class TalkBackAnnouncementsTest {
     }
 
     @Test
-    fun transportAndVolumeKeysAreButtons() {
+    fun transportKeysAreButtons() {
         showNowPlaying()
         compose.onNodeWithText("Siguiente").assert(isButton)
         compose.onNodeWithText("Anterior").assert(isButton)
-        compose.onNodeWithContentDescription("Subir el volumen").assert(isButton)
-        compose.onNodeWithContentDescription("Bajar el volumen").assert(isButton)
+    }
+
+    @Test
+    fun noVolumeKeysRemainOnTheScreen() {
+        showNowPlaying()
+        compose.onAllNodesWithContentDescription("Subir el volumen").assertCountEquals(0)
+        compose.onAllNodesWithContentDescription("Bajar el volumen").assertCountEquals(0)
     }
 
     // --- Home -----------------------------------------------------------------------------------------------
 
     @Test
-    fun homeTilesAndThePillAreButtons() {
+    fun homeHeroAndRowsAreButtons() {
         compose.setContent {
             MiMusicaTheme {
                 HomeScreen(
-                    miniPlayer = null,
-                    onSongs = {}, onPlaylists = {}, onSearch = {}, onSing = {},
-                    onSettings = {}, onMiniPlayer = {}, onMiniToggle = {},
+                    summary = com.mimusica.app.ui.home.HomeSummary(songs = 1, playlists = 1, singable = 1, continueSong = song),
+                    onContinue = {}, onSearch = {}, onSongs = {}, onPlaylists = {},
                 )
             }
         }
-        listOf("Mis canciones", "Mis listas", "Buscar", "Cantar").forEach {
+        compose.onNodeWithContentDescription("Seguir cantando: Cielito Lindo").assertExists()
+        listOf("Mis canciones", "Mis listas").forEach {
             compose.onNodeWithText(it).assert(isButton)
         }
-        compose.onNodeWithContentDescription("Aa, Tamaño de letra").assert(isButton)
     }
 
     // --- Search ---------------------------------------------------------------------------------------------
@@ -228,9 +236,21 @@ class TalkBackAnnouncementsTest {
     fun aTextSizeChangeIsAnnounced() {
         compose.setContent {
             MiMusicaTheme {
-                TextSizeScreen(current = TextScale.LARGE, onSelect = {}, onCaregiver = {}, onBack = {})
+                AjustesScreen(
+                    fontChoice = FontChoice.ATKINSON,
+                    textScale = TextScale.LARGE,
+                    versionName = "0.1.0",
+                    updateUi = AboutUpdateUi.UpToDate,
+                    onSelectFont = {},
+                    onSelectTextScale = {},
+                    onCheckUpdate = {},
+                    onInstallUpdate = {},
+                    onCaregiver = {},
+                    onBack = {},
+                )
             }
         }
-        compose.onNodeWithText("Tamaño elegido: Grande").assertIsDisplayed().assert(polite)
+        compose.onNodeWithText("Tamaño elegido: Grande").performScrollTo().assertIsDisplayed().assert(polite)
+        compose.onNodeWithText("Ya tienes la última versión").performScrollTo().assertIsDisplayed().assert(polite)
     }
 }

@@ -154,7 +154,7 @@ class TalkBackLabelsTest {
                 Box(Modifier.size(392.dp, height.dp)) {
                     NowPlayingScreen(
                         state = playing, onToggle = {}, onNext = {}, onPrevious = {},
-                        onVolumeUp = {}, onVolumeDown = {}, onRestart = {}, onSing = {}, onBack = {},
+                        onSing = {}, onBack = {},
                     )
                 }
             }

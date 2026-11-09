@@ -2,6 +2,7 @@ package com.mimusica.app.ui.karaoke
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mimusica.app.data.LastSungStore
 import com.mimusica.app.data.LibraryRepository
 import com.mimusica.app.domain.lyrics.LrcParser
 import com.mimusica.app.domain.lyrics.LyricsTimeline
@@ -30,6 +31,7 @@ class KaraokeViewModel(
     private val songId: String,
     private val library: LibraryRepository,
     private val player: PlayerPort,
+    private val lastSung: LastSungStore? = null,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(KaraokeUiState())
@@ -86,6 +88,8 @@ class KaraokeViewModel(
                 plain = plain,
             )
         }
+        // Home's "Seguir cantando" opens whatever was sung last.
+        if (song != null && mode != KaraokeMode.NONE) lastSung?.setLastSungSongId(song.id)
         if (song != null && song.isDownloaded && player.state.value.currentSong?.id != song.id) {
             player.play(listOf(song), 0)
         }

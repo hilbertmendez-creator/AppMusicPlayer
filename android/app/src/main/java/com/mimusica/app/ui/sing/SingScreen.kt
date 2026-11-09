@@ -34,8 +34,9 @@ fun SingScreen(
     songs: List<Song>,
     onSing: (Song) -> Unit,
     onSearch: () -> Unit,
-    onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    /** Null when Cantar is open as a tab: nothing to go back to. */
+    onBack: (() -> Unit)? = null,
 ) {
     ScreenScaffold(
         title = stringResource(R.string.sing_title),

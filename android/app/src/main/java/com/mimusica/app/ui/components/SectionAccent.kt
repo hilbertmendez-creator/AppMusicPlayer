@@ -1,16 +1,19 @@
 package com.mimusica.app.ui.components
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.Lyrics
 import androidx.compose.material.icons.filled.QueueMusic
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import com.mimusica.app.ui.theme.AmberBrown
-import com.mimusica.app.ui.theme.DeepBlue
-import com.mimusica.app.ui.theme.DeepTeal
-import com.mimusica.app.ui.theme.Plum
+import com.mimusica.app.ui.theme.Navy
+import com.mimusica.app.ui.theme.SectionLists
+import com.mimusica.app.ui.theme.SectionSearch
+import com.mimusica.app.ui.theme.SectionSettings
+import com.mimusica.app.ui.theme.SectionSing
 
 /**
  * The colour and icon of a Home tile, carried over to the screen that tile opens so nobody has to wonder where
@@ -19,12 +22,15 @@ import com.mimusica.app.ui.theme.Plum
 data class SectionAccent(val color: Color, val icon: ImageVector)
 
 object SectionAccents {
-    val Songs = SectionAccent(DeepBlue, Icons.Filled.LibraryMusic)
-    val Playlists = SectionAccent(Plum, Icons.Filled.QueueMusic)
-    val Search = SectionAccent(DeepTeal, Icons.Filled.Search)
+    val Home = SectionAccent(Navy, Icons.Filled.Home)
+    val Songs = SectionAccent(Navy, Icons.Filled.LibraryMusic)
+    val Playlists = SectionAccent(SectionLists, Icons.Filled.QueueMusic)
+    val Search = SectionAccent(SectionSearch, Icons.Filled.Search)
 
     // Lyrics icon, not a microphone: the mic is reserved for "Hablar" (voice search).
-    val Sing = SectionAccent(AmberBrown, Icons.Filled.Lyrics)
+    val Sing = SectionAccent(SectionSing, Icons.Filled.Lyrics)
 
-    val all = listOf(Songs, Playlists, Search, Sing)
+    val Settings = SectionAccent(SectionSettings, Icons.Filled.Settings)
+
+    val all = listOf(Home, Songs, Playlists, Search, Sing, Settings)
 }

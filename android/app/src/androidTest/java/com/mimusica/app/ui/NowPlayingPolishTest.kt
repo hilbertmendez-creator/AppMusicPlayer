@@ -4,14 +4,15 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.SemanticsActions
-import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertHeightIsAtLeast
-import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.graphics.toPixelMap
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -20,12 +21,14 @@ import com.mimusica.app.domain.model.Song
 import com.mimusica.app.domain.player.PlaybackState
 import com.mimusica.app.ui.player.NowPlayingScreen
 import com.mimusica.app.ui.theme.MiMusicaTheme
+import com.mimusica.app.ui.theme.Sun
+import kotlin.math.abs
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
-/** Round 4 polish of "Reproduciendo": volume level, a progress bar that is not a slider, key spacing, restart. */
+/** Polish of "Reproduciendo": a progress bar that is not a slider, key spacing, the sing button, no volume. */
 class NowPlayingPolishTest {
     @get:Rule
     val compose = createComposeRule()
@@ -40,13 +43,13 @@ class NowPlayingPolishTest {
         volumeLevel = 6,
     )
 
-    private fun show(state: PlaybackState = playing, onRestart: () -> Unit = {}) {
+    private fun show(state: PlaybackState = playing, onSing: (String) -> Unit = {}) {
         compose.setContent {
             MiMusicaTheme {
                 Box(Modifier.size(411.dp, 914.dp)) {
                     NowPlayingScreen(
                         state = state, onToggle = {}, onNext = {}, onPrevious = {},
-                        onVolumeUp = {}, onVolumeDown = {}, onRestart = onRestart, onSing = {}, onBack = {},
+                        onSing = onSing, onBack = {},
                     )
                 }
             }
@@ -54,26 +57,10 @@ class NowPlayingPolishTest {
     }
 
     @Test
-    fun volumeShowsItsLevelAsVisibleText() {
+    fun volumeAndRestartControlsAreGoneEvenWhenTheLevelIsKnown() {
         show()
-        // The two spaces inside "6 de 10" are non-breaking so the readout wraps as "Volumen" / "6 de 10".
-        compose.onNodeWithText("Volumen 6 de 10").assertIsDisplayed()
-    }
-
-    @Test
-    fun volumeSpeaksItsLevelAsAStateDescription() {
-        show()
-        compose.onNodeWithContentDescription("Volumen").assert(
-            SemanticsMatcher("state description is 6 de 10") {
-                it.config.getOrNull(SemanticsProperties.StateDescription) == "6 de 10"
-            },
-        )
-    }
-
-    @Test
-    fun volumeFallsBackToTheBareWordWhileTheLevelIsUnknown() {
-        show(playing.copy(volumeLevel = null))
-        compose.onNodeWithText("Volumen").assertIsDisplayed()
+        compose.onAllNodesWithText("Volumen", substring = true).assertCountEquals(0)
+        compose.onAllNodesWithText("Desde el principio").assertCountEquals(0)
     }
 
     @Test
@@ -85,20 +72,35 @@ class NowPlayingPolishTest {
     }
 
     @Test
-    fun transportKeysAreAtLeast12dpApart() {
+    fun transportKeysAreAtLeast8dpApart() {
         show()
         val previous = compose.onNodeWithText("Anterior").getUnclippedBoundsInRoot()
         val toggle = compose.onNodeWithText("Pausar").getUnclippedBoundsInRoot()
         val next = compose.onNodeWithText("Siguiente").getUnclippedBoundsInRoot()
-        assertTrue("gap before play/pause was ${toggle.left - previous.right}", toggle.left - previous.right >= 12.dp)
-        assertTrue("gap after play/pause was ${next.left - toggle.right}", next.left - toggle.right >= 12.dp)
+        assertTrue("gap before play/pause was ${toggle.left - previous.right}", toggle.left - previous.right >= 8.dp)
+        assertTrue("gap after play/pause was ${next.left - toggle.right}", next.left - toggle.right >= 8.dp)
     }
 
     @Test
-    fun fromTheBeginningIsALabelledButtonThatSeeksToStart() {
-        var restarts = 0
-        show(onRestart = { restarts++ })
-        compose.onNodeWithText("Desde el principio").assertIsDisplayed().assertHeightIsAtLeast(64.dp).performClick()
-        assertEquals(1, restarts)
+    fun transportKeysAre92dpTallAndPausarIsTheWidest() {
+        show()
+        val keys = listOf("Anterior", "Pausar", "Siguiente").map {
+            compose.onNodeWithText(it).assertHeightIsAtLeast(92.dp).getUnclippedBoundsInRoot()
+        }
+        val widths = keys.map { it.right - it.left }
+        assertTrue("Pausar must be the widest: $widths", widths[1] > widths[0] && widths[1] > widths[2])
+    }
+
+    @Test
+    fun singButtonIsSunColouredAtLeast64dpAndCallsBackWithTheSong() {
+        var sung: String? = null
+        show(onSing = { sung = it })
+        val sing = compose.onNodeWithText("Cantar con la letra").assertHeightIsAtLeast(64.dp)
+        val image = sing.captureToImage().toPixelMap()
+        // 10px in from the left edge, mid-height: inside the button's padding, so it is the container colour.
+        val pixel = image[10, image.height / 2]
+        assertTrue("sing button should be Sun, was $pixel", abs(pixel.red - Sun.red) < 0.02f && abs(pixel.green - Sun.green) < 0.02f && abs(pixel.blue - Sun.blue) < 0.02f)
+        sing.performClick()
+        assertEquals("1", sung)
     }
 }
