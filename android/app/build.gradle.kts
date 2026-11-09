@@ -23,7 +23,9 @@ android {
         applicationId = "com.mimusica.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
+        // Android only installs an update over the current app when versionCode grows. The release workflow
+        // passes -PversionCode=<n>; local builds keep 1.
+        versionCode = providers.gradleProperty("versionCode").orNull?.toIntOrNull() ?: 1
         versionName = "0.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

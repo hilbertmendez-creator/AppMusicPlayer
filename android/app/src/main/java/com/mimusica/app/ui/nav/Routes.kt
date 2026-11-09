@@ -75,9 +75,12 @@ fun HomeRoute(
         }.flowOn(Dispatchers.Default)
     }
     val summary by summaryFlow.collectAsStateWithLifecycle(initialValue = null)
+    val updateState by container.updates.state.collectAsStateWithLifecycle()
     HomeScreen(
         miniPlayer = mini,
         summary = summary,
+        updateState = updateState,
+        onUpdate = container.updates::startUpdate,
         onSongs = onSongs,
         onPlaylists = onPlaylists,
         onSearch = onSearch,

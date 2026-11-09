@@ -11,6 +11,11 @@
     <string name="mini_player_open">Abrir el reproductor</string>
     <string name="home_text_size_pill">Aa</string>
     <string name="home_text_size_desc">Aa, Tamaño de letra</string>
+    <string name="update_available">Hay una versión nueva</string>
+    <string name="update_tap">Toca aquí para actualizar</string>
+    <string name="update_downloading">Descargando la actualización…</string>
+    <string name="update_wait">Un momento, por favor</string>
+    <string name="update_failed">No se pudo descargar</string>
     <string name="home_songs_none">Todavía no tienes canciones</string>
     <plurals name="home_playlists_count">
         <item quantity="one">%d lista</item>

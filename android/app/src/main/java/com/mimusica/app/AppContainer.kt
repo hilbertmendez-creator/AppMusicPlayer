@@ -12,6 +12,7 @@ import com.mimusica.app.data.local.AppDatabase
 import com.mimusica.app.data.remote.ConnectionConfig
 import com.mimusica.app.data.remote.NetworkFactory
 import com.mimusica.app.data.remote.RemoteMusicApi
+import com.mimusica.app.data.update.UpdateManager
 import com.mimusica.app.data.settings.DataStoreSettingsStore
 import com.mimusica.app.data.settings.SettingsStore
 import com.mimusica.app.data.work.SyncScheduler
@@ -52,11 +53,14 @@ class AppContainer(private val app: Application) {
 
     val player: PlayerPort by lazy { PlayerController(app, appScope) }
 
+    val updates: UpdateManager by lazy { UpdateManager(app, appScope) }
+
     /**
      * Keeps the HTTP layer in sync with the caregiver settings and schedules syncing once the app is configured.
      * Nothing here may block the main thread: it runs before the first frame.
      */
     fun start() {
+        updates.checkOnStart() // network work runs on Dispatchers.IO inside; failures are silent
         appScope.launch {
             // Heavy singletons (Room, OkHttp/Retrofit, WorkManager) are built on a worker thread right away,
             // so by the time Home composes they are ready instead of being created during composition.
