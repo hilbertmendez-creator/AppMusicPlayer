@@ -358,7 +358,7 @@ fun AjustesRoute(vm: SettingsViewModel, onCaregiver: () -> Unit) {
     AjustesScreen(
         fontChoice = state.settings.fontChoice,
         textScale = state.settings.textScale,
-        versionName = BuildConfig.VERSION_NAME,
+        versionName = "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
         updateUi = aboutUpdateUi(check, updateState),
         onSelectFont = vm::setFontChoice,
         onSelectTextScale = vm::setTextScale,
