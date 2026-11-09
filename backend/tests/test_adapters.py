@@ -98,6 +98,48 @@ def test_lrclib_get_drops_timestamps_when_duration_is_far_off():
     assert out.synced_lrc is None and out.plain == "hi"
 
 
+def test_lrclib_search_drops_synced_lines_that_run_past_the_end_of_the_audio():
+    # Declared 256 s, but the timestamps reach 4:30: they were copied from a longer recording.
+    handler = _search_handler(
+        [
+            {
+                "duration": 256,
+                "syncedLyrics": "[00:01.00]uno\n[04:30.36]fin",
+                "plainLyrics": None,
+            }
+        ]
+    )
+    out = lrclib(handler).get("Lamento Borincano", "Daniel Santos", 256)
+    assert out.synced_lrc is None
+    assert out.plain == "uno\nfin"
+
+
+def test_lrclib_search_picks_another_version_whose_timestamps_fit():
+    handler = _search_handler(
+        [
+            {"duration": 256, "syncedLyrics": "[00:01.00]mal\n[04:30.00]x", "plainLyrics": "mal"},
+            {"duration": 257, "syncedLyrics": "[00:01.00]bien\n[04:10.00]x", "plainLyrics": "bien"},
+        ]
+    )
+    out = lrclib(handler).get("Song", "Artist", 256)
+    assert out.synced_lrc == "[00:01.00]bien\n[04:10.00]x"
+
+
+def test_lrclib_get_drops_synced_lines_past_the_end_of_the_audio():
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "duration": 256,
+                "syncedLyrics": "[00:01.00]a\n[04:30.00]b",
+                "plainLyrics": "a b",
+            },
+        )
+
+    out = lrclib(handler).get("Song", "Artist", 256)
+    assert out.synced_lrc is None and out.plain == "a b"
+
+
 def test_lrclib_returns_none_when_nothing_found():
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path == "/api/get":
