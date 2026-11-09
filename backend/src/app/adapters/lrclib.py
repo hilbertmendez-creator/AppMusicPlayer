@@ -10,6 +10,9 @@ from app.domain.models import Lyrics
 
 BASE_URL = "https://lrclib.net"
 MAX_DURATION_DRIFT_SECONDS = 15
+# Timestamps only line up with the audio when it is (nearly) the same recording. A version that is
+# several seconds longer/shorter has a different intro or tempo, so its LRC drifts out of sync.
+MAX_SYNC_DRIFT_SECONDS = 3
 
 
 def _to_lyrics(item: dict) -> Lyrics | None:
@@ -29,6 +32,18 @@ def _strip_lrc(synced: str) -> str:
     return "\n".join(line for line in lines if line)
 
 
+def _plain_only(lyrics: Lyrics) -> Lyrics | None:
+    """Same words without timestamps (used when the recording is not the same as our audio)."""
+    plain = lyrics.plain or (_strip_lrc(lyrics.synced_lrc) if lyrics.synced_lrc else None)
+    return Lyrics(synced_lrc=None, plain=plain) if plain else None
+
+
+def _drift(item: dict, duration_seconds: int | None) -> float:
+    if not duration_seconds:
+        return float("inf")
+    return abs((item.get("duration") or 10**6) - duration_seconds)
+
+
 class LrclibProvider:
     def __init__(
         self,
@@ -46,7 +61,18 @@ class LrclibProvider:
         if resp.status_code == 404:
             return self._search(title, artist, duration_seconds)
         resp.raise_for_status()
-        return _to_lyrics(resp.json())
+        item = resp.json()
+        lyrics = _to_lyrics(item)
+        # /api/get already matches on duration; re-check only when LRCLIB tells us the length.
+        if (
+            lyrics is not None
+            and lyrics.synced_lrc
+            and duration_seconds
+            and item.get("duration")
+            and _drift(item, duration_seconds) > MAX_SYNC_DRIFT_SECONDS
+        ):
+            return _plain_only(lyrics)
+        return lyrics
 
     def _search(self, title: str, artist: str, duration_seconds: int | None) -> Lyrics | None:
         resp = self._client.get(
@@ -58,17 +84,24 @@ class LrclibProvider:
         candidates = [c for c in resp.json() if _to_lyrics(c) is not None]
         if not candidates:
             return self._search_title_only(title, duration_seconds)
-        if duration_seconds:
+        if not duration_seconds:
+            return _to_lyrics(candidates[0])
 
-            def drift(c: dict) -> float:
-                return abs((c.get("duration") or 10**6) - duration_seconds)
+        # Synced lyrics only from a recording of (almost) the same length as our audio.
+        in_sync = [
+            c
+            for c in candidates
+            if c.get("syncedLyrics") and _drift(c, duration_seconds) <= MAX_SYNC_DRIFT_SECONDS
+        ]
+        if in_sync:
+            return _to_lyrics(min(in_sync, key=lambda c: _drift(c, duration_seconds)))
 
-            best = min(candidates, key=drift)
-            if drift(best) > MAX_DURATION_DRIFT_SECONDS:
-                return None
-        else:
-            best = candidates[0]
-        return _to_lyrics(best)
+        # Otherwise the words are still useful (plain lyrics scroll along with the song).
+        best = min(candidates, key=lambda c: _drift(c, duration_seconds))
+        if _drift(best, duration_seconds) > MAX_DURATION_DRIFT_SECONDS:
+            return None
+        lyrics = _to_lyrics(best)
+        return _plain_only(lyrics) if lyrics else None
 
     def _search_title_only(self, title: str, duration_seconds: int | None) -> Lyrics | None:
         """Last resort when LRCLIB does not know the artist (typical for covers/compilations).
@@ -90,5 +123,4 @@ class LrclibProvider:
         gap, best = min(scored, key=lambda pair: pair[0])
         if gap > MAX_DURATION_DRIFT_SECONDS:
             return None
-        plain = best.plain or (_strip_lrc(best.synced_lrc) if best.synced_lrc else None)
-        return Lyrics(synced_lrc=None, plain=plain) if plain else None
+        return _plain_only(best)
