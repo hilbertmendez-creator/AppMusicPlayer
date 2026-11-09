@@ -30,7 +30,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
             CompositionLocalProvider(LocalAppContainer provides container) {
-                MiMusicaTheme(textScale = settings.textScale) {
+                MiMusicaTheme(textScale = settings.textScale, fontChoice = settings.fontChoice) {
                     AppNav()
                 }
             }

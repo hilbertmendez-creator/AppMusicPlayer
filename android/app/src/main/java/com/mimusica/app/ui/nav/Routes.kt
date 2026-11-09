@@ -12,10 +12,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.mimusica.app.BuildConfig
 import com.mimusica.app.LocalAppContainer
 import com.mimusica.app.ui.home.HomeScreen
 import com.mimusica.app.ui.home.HomeSummary
-import com.mimusica.app.ui.home.MiniPlayerUi
 import com.mimusica.app.ui.home.homeSummary
 import com.mimusica.app.ui.karaoke.KaraokeScreen
 import com.mimusica.app.ui.karaoke.KaraokeViewModel
@@ -32,7 +32,8 @@ import com.mimusica.app.ui.settings.PinScreen
 import com.mimusica.app.ui.settings.SettingsScreen
 import com.mimusica.app.ui.settings.SettingsViewModel
 import com.mimusica.app.ui.settings.SetupScreen
-import com.mimusica.app.ui.settings.TextSizeScreen
+import com.mimusica.app.ui.settings.AjustesScreen
+import com.mimusica.app.ui.settings.aboutUpdateUi
 import com.mimusica.app.ui.sing.SingScreen
 import com.mimusica.app.ui.components.rememberSpeechInput
 import com.mimusica.app.ui.songs.SongsScreen
@@ -40,6 +41,8 @@ import com.mimusica.app.ui.songs.filterSongs
 import com.mimusica.app.ui.songs.SongsViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
@@ -55,44 +58,42 @@ fun SetupRoute(vm: SettingsViewModel, onDone: () -> Unit) {
 
 @Composable
 fun HomeRoute(
+    onContinue: (songId: String) -> Unit,
+    onSearch: () -> Unit,
     onSongs: () -> Unit,
     onPlaylists: () -> Unit,
-    onSearch: () -> Unit,
-    onSing: () -> Unit,
-    onSettings: () -> Unit,
-    onOpenPlayer: () -> Unit,
 ) {
     val container = LocalAppContainer.current
-    val player = container.player
-    val playback by player.state.collectAsStateWithLifecycle()
-    val mini = playback.currentSong?.let { MiniPlayerUi(it.title, it.artist, playback.isPlaying, it.thumbnailUrl, playback.positionMs, playback.durationMs) }
     // The library is resolved off the main thread (it may still be warming up), so Home's first frame never
-    // waits for Room. Until the first counts arrive the tiles simply show no subtitle.
+    // waits for Room. Until the first counts arrive the rows show no subtitle and the hero waits.
     val summaryFlow = remember(container) {
         flow<HomeSummary?> {
             val library = container.library
-            emitAll(combine(library.observeDownloadedSongs(), library.observePlaylists(), ::homeSummary))
+            emitAll(
+                combine(
+                    library.observeDownloadedSongs(),
+                    library.observePlaylists(),
+                    container.lastSung.lastSungSongId,
+                    container.player.state.map { it.currentSong?.id }.distinctUntilChanged(),
+                ) { songs, playlists, lastSung, current -> homeSummary(songs, playlists, current, lastSung) },
+            )
         }.flowOn(Dispatchers.Default)
     }
     val summary by summaryFlow.collectAsStateWithLifecycle(initialValue = null)
     val updateState by container.updates.state.collectAsStateWithLifecycle()
     HomeScreen(
-        miniPlayer = mini,
         summary = summary,
         updateState = updateState,
         onUpdate = container.updates::startUpdate,
+        onContinue = onContinue,
+        onSearch = onSearch,
         onSongs = onSongs,
         onPlaylists = onPlaylists,
-        onSearch = onSearch,
-        onSing = onSing,
-        onSettings = onSettings,
-        onMiniPlayer = onOpenPlayer,
-        onMiniToggle = player::togglePlayPause,
     )
 }
 
 @Composable
-fun SearchRoute(onBack: () -> Unit, onPlayerOpen: () -> Unit, onAddToList: (songId: String) -> Unit) {
+fun SearchRoute(onPlayerOpen: () -> Unit, onAddToList: (songId: String) -> Unit) {
     val container = LocalAppContainer.current
     val vm: SearchViewModel = viewModel(
         factory = viewModelFactory { initializer { SearchViewModel(container.remote, container.library) } },
@@ -118,7 +119,6 @@ fun SearchRoute(onBack: () -> Unit, onPlayerOpen: () -> Unit, onAddToList: (song
             onPlayerOpen()
         },
         onAddToList = { onAddToList(it.id) },
-        onBack = onBack,
     )
 }
 
@@ -208,9 +208,9 @@ fun SongsRoute(
 }
 
 @Composable
-fun SingRoute(vm: SongsViewModel, onBack: () -> Unit, onSing: (String) -> Unit, onSearch: () -> Unit) {
+fun SingRoute(vm: SongsViewModel, onSing: (String) -> Unit, onSearch: () -> Unit) {
     val state by vm.uiState.collectAsStateWithLifecycle()
-    SingScreen(songs = state.singable, onSing = { onSing(it.id) }, onSearch = onSearch, onBack = onBack)
+    SingScreen(songs = state.singable, onSing = { onSing(it.id) }, onSearch = onSearch)
 }
 
 @Composable
@@ -314,9 +314,6 @@ fun NowPlayingRoute(onBack: () -> Unit, onSing: (String) -> Unit) {
         onToggle = player::togglePlayPause,
         onNext = player::next,
         onPrevious = player::previous,
-        onVolumeUp = player::volumeUp,
-        onVolumeDown = player::volumeDown,
-        onRestart = { player.seekTo(0L) },
         onSing = onSing,
         onBack = onBack,
     )
@@ -327,7 +324,7 @@ fun KaraokeRoute(songId: String, onBack: () -> Unit) {
     val container = LocalAppContainer.current
     val vm: KaraokeViewModel = viewModel(
         key = "karaoke-$songId",
-        factory = viewModelFactory { initializer { KaraokeViewModel(songId, container.library, container.player) } },
+        factory = viewModelFactory { initializer { KaraokeViewModel(songId, container.library, container.player, container.lastSung) } },
     )
     val state by vm.uiState.collectAsStateWithLifecycle()
     val settings by container.settingsStore.settings.collectAsStateWithLifecycle(
@@ -351,15 +348,23 @@ fun PinRoute(vm: SettingsViewModel, onBack: () -> Unit, onUnlocked: () -> Unit) 
     PinScreen(wrongPin = state.pinError, onSubmit = vm::unlock, onPinEdited = vm::onPinEdited, onBack = onBack)
 }
 
-/** "Tamaño de letra": no PIN. The caregiver door at the bottom leads to the PIN gate. */
+/** Ajustes: font, text size and the update check, no PIN. The caregiver door at the bottom leads to the PIN gate. */
 @Composable
-fun TextSizeRoute(vm: SettingsViewModel, onCaregiver: () -> Unit, onBack: () -> Unit) {
+fun AjustesRoute(vm: SettingsViewModel, onCaregiver: () -> Unit) {
+    val container = LocalAppContainer.current
     val state by vm.uiState.collectAsStateWithLifecycle()
-    TextSizeScreen(
-        current = state.settings.textScale,
-        onSelect = vm::setTextScale,
+    val check by container.updates.check.collectAsStateWithLifecycle()
+    val updateState by container.updates.state.collectAsStateWithLifecycle()
+    AjustesScreen(
+        fontChoice = state.settings.fontChoice,
+        textScale = state.settings.textScale,
+        versionName = BuildConfig.VERSION_NAME,
+        updateUi = aboutUpdateUi(check, updateState),
+        onSelectFont = vm::setFontChoice,
+        onSelectTextScale = vm::setTextScale,
+        onCheckUpdate = container.updates::checkNow,
+        onInstallUpdate = container.updates::startUpdate,
         onCaregiver = onCaregiver,
-        onBack = onBack,
     )
 }
 

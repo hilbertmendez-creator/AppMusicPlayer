@@ -19,12 +19,9 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Lyrics
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Remove
-import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.LinearProgressIndicator
@@ -55,13 +52,19 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.mimusica.app.R
 import com.mimusica.app.domain.player.PlaybackState
-import com.mimusica.app.domain.player.VOLUME_STEPS
 import com.mimusica.app.ui.components.ArtworkFill
+import com.mimusica.app.ui.components.BigButton
 import com.mimusica.app.ui.components.EmptyMessage
 import com.mimusica.app.ui.components.MinTouch
+import com.mimusica.app.ui.theme.Ink
+import com.mimusica.app.ui.theme.InkSoft
+import com.mimusica.app.ui.theme.Line
+import com.mimusica.app.ui.theme.Navy
+import com.mimusica.app.ui.theme.OnNavy
 import com.mimusica.app.ui.theme.ProgressFill
+import com.mimusica.app.ui.theme.Sun
+import com.mimusica.app.ui.theme.SurfaceFill
 import com.mimusica.app.ui.theme.ProgressTrack
-import com.mimusica.app.ui.components.OutlineBigButton
 import com.mimusica.app.ui.components.ScreenScaffold
 
 private val ArtworkMin = 96.dp
@@ -79,9 +82,6 @@ fun NowPlayingScreen(
     onToggle: () -> Unit,
     onNext: () -> Unit,
     onPrevious: () -> Unit,
-    onVolumeUp: () -> Unit,
-    onVolumeDown: () -> Unit,
-    onRestart: () -> Unit,
     onSing: (songId: String) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
@@ -104,7 +104,7 @@ fun NowPlayingScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .heightIn(min = viewportHeight),
-                    cover = { ArtworkFill(url = song.thumbnailUrl) },
+                    cover = { ArtworkFill(url = song.thumbnailUrl, decorative = false, corner = 34.dp) },
                     controls = {
                         Controls(
                             state = state,
@@ -114,9 +114,6 @@ fun NowPlayingScreen(
                             onToggle = onToggle,
                             onNext = onNext,
                             onPrevious = onPrevious,
-                            onVolumeUp = onVolumeUp,
-                            onVolumeDown = onVolumeDown,
-                            onRestart = onRestart,
                             onSing = { onSing(song.id) },
                         )
                     },
@@ -135,9 +132,6 @@ private fun Controls(
     onToggle: () -> Unit,
     onNext: () -> Unit,
     onPrevious: () -> Unit,
-    onVolumeUp: () -> Unit,
-    onVolumeDown: () -> Unit,
-    onRestart: () -> Unit,
     onSing: () -> Unit,
 ) {
     Column(
@@ -157,28 +151,20 @@ private fun Controls(
                 modifier = Modifier.fillMaxWidth(),
                 style = MaterialTheme.typography.headlineMedium,
                 textAlign = TextAlign.Center,
-                maxLines = 3,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
                 artist,
                 modifier = Modifier.fillMaxWidth(),
                 style = MaterialTheme.typography.titleMedium,
+                color = InkSoft,
                 textAlign = TextAlign.Center,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        if (state.durationMs > 0) {
-            ProgressBlock(state.positionMs, state.durationMs)
-            // The bar cannot be dragged, so going back to the start is a labelled button of its own.
-            OutlineBigButton(
-                text = stringResource(R.string.now_playing_restart),
-                onClick = onRestart,
-                icon = Icons.Filled.Replay,
-                minHeight = MinTouch,
-            )
-        }
+        if (state.durationMs > 0) ProgressBlock(state.positionMs, state.durationMs)
         TransportKeys(
             isPlaying = state.isPlaying,
             onPrevious = onPrevious,
@@ -195,28 +181,15 @@ private fun Controls(
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(22.dp),
-            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f),
-        ) {
-            Row(
-                modifier = Modifier.padding(8.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                VolumeKey(Icons.Filled.Remove, stringResource(R.string.volume_down), onVolumeDown)
-                VolumeReadout(state.volumeLevel, Modifier.weight(1f))
-                VolumeKey(Icons.Filled.Add, stringResource(R.string.volume_up), onVolumeUp)
-            }
-        }
         if (canSing) {
-            OutlineBigButton(
-                text = stringResource(R.string.sing),
+            // Sun marks this one action; the label is the whole sentence so nobody wonders what "Cantar" opens.
+            BigButton(
+                text = stringResource(R.string.sing_with_lyrics),
                 onClick = onSing,
                 icon = Icons.Filled.Lyrics,
-                minHeight = 72.dp,
-                color = MaterialTheme.colorScheme.primary,
+                minHeight = MinTouch,
+                containerColor = Sun,
+                contentColor = Ink,
             )
         } else {
             // A quiet explanation, not a disabled button: nothing here looks tappable.
@@ -231,19 +204,19 @@ private fun Controls(
     }
 }
 
-/** Minimum height of a transport key in the grid: icon + label stacked, well above the 64dp floor. */
-private val TransportKeyHeight = 116.dp
+/** Height of a transport key in the row: icon + label stacked, well above the 64dp floor. */
+private val TransportKeyHeight = 92.dp
 
 /** Minimum height of a transport key when the keys fall back to full-width rows. */
 private val TransportRowHeight = 72.dp
 
 /** Icon slot shared by every key so all labels sit on one baseline, whatever the icon size. */
-private val TransportIconSlot = 44.dp
+private val TransportIconSlot = 40.dp
 
-private val TransportGap = 12.dp
+private val TransportGap = 8.dp
 
 /** Width of the play/pause key relative to previous and next. */
-private const val CenterKeyWeight = 1.15f
+private const val CenterKeyWeight = 1.5f
 
 /** Inner side padding so a label never touches the 2dp card border (it did with "Siguiente" on a Pixel 7a). */
 private val TransportKeyPadding = 6.dp
@@ -263,13 +236,13 @@ private fun TransportKeys(
     val previous = stringResource(R.string.previous)
     val next = stringResource(R.string.next)
     val pause = stringResource(R.string.pause)
-    val play = stringResource(R.string.play)
+    val play = stringResource(R.string.resume)
     val style = MaterialTheme.typography.labelMedium
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-        // 12dp between keys so a finger that lands between two never fires the wrong one. The play/pause key is
-        // wider than its neighbours: its label ("Reproducir") is the longest and it is the main action anyway.
+        // 8dp between keys so a finger that lands between two never fires the wrong one. The play/pause key is
+        // wider than its neighbours: it is the main action.
         val unit = (maxWidth - TransportGap * 2) / (2 + CenterKeyWeight)
         val sideInner = unit - TransportKeyPadding * 2
         val centerInner = unit * CenterKeyWeight - TransportKeyPadding * 2
@@ -315,7 +288,6 @@ private fun TransportKey(
     stacked: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    val colors = MaterialTheme.colorScheme
     Surface(
         onClick = onClick,
         modifier = modifier
@@ -325,22 +297,22 @@ private fun TransportKey(
                 // The play/pause key changes its label in place: say the new state politely.
                 if (primary) liveRegion = LiveRegionMode.Polite
             },
-        shape = RoundedCornerShape(22.dp),
-        color = if (primary) colors.primary else colors.surface,
-        contentColor = if (primary) colors.onPrimary else colors.onSurface,
-        border = if (primary) null else BorderStroke(2.dp, colors.outline),
+        shape = RoundedCornerShape(18.dp),
+        color = if (primary) Navy else SurfaceFill,
+        contentColor = if (primary) OnNavy else Ink,
+        border = if (primary) null else BorderStroke(2.dp, Line),
     ) {
         val iconSlot: @Composable () -> Unit = {
             Box(modifier = Modifier.size(TransportIconSlot), contentAlignment = Alignment.Center) {
                 // Decorative: the label is the accessible name.
-                Icon(icon, contentDescription = null, modifier = Modifier.size(if (primary) 44.dp else 36.dp))
+                Icon(icon, contentDescription = null, modifier = Modifier.size(if (primary) 40.dp else 32.dp))
             }
         }
         if (stacked) {
             Column(
-                modifier = Modifier.padding(vertical = 12.dp, horizontal = TransportKeyPadding),
+                modifier = Modifier.padding(vertical = 8.dp, horizontal = TransportKeyPadding),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterVertically),
+                verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterVertically),
             ) {
                 iconSlot()
                 Text(label, style = MaterialTheme.typography.labelMedium, textAlign = TextAlign.Center, maxLines = 1, softWrap = false)
@@ -359,57 +331,8 @@ private fun TransportKey(
 }
 
 /**
- * "Volumen 6 de 10": the level in words between the two keys (the phone's 0..15 is mapped onto 0..10). The
- * spaces inside "6 de 10" do not break, so when the text is large the readout wraps as "Volumen" / "6 de 10".
- * TalkBack gets one stop that reads "Volumen, 6 de 10" (name = the visible first word, state = the level),
- * the same pattern as the progress bar; the visible text is hidden from it so nothing is said twice.
- */
-@OptIn(ExperimentalComposeUiApi::class)
-@Composable
-private fun VolumeReadout(level: Int?, modifier: Modifier = Modifier) {
-    val name = stringResource(R.string.volume)
-    val state = level?.let { stringResource(R.string.volume_state, it, VOLUME_STEPS) }
-    Box(
-        modifier = modifier.semantics {
-            contentDescription = name
-            if (state != null) stateDescription = state
-        },
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            if (level != null) stringResource(R.string.volume_level, level, VOLUME_STEPS) else name,
-            modifier = Modifier.semantics { invisibleToUser() },
-            style = MaterialTheme.typography.bodyLarge,
-            textAlign = TextAlign.Center,
-        )
-    }
-}
-
-/** Volume key: a quiet outlined rounded square at the minimum touch size, inside the volume bar. */
-@Composable
-private fun VolumeKey(icon: ImageVector, description: String, onClick: () -> Unit) {
-    Surface(
-        onClick = onClick,
-        modifier = Modifier
-            .size(MinTouch)
-            .semantics {
-                role = Role.Button
-                contentDescription = description
-            },
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surface,
-        contentColor = MaterialTheme.colorScheme.onSurface,
-        border = BorderStroke(2.dp, MaterialTheme.colorScheme.outline),
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Icon(icon, contentDescription = null, modifier = Modifier.size(34.dp))
-        }
-    }
-}
-
-/**
  * Progress bar plus "1:05 / 3:40"; TalkBack gets one stop: "Avance de la canción, 1:05 de 3:40".
- * Shared by the player screen and the "Sonando ahora" card on Home.
+ * Used by the player screen.
  */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -427,7 +350,7 @@ fun ProgressBlock(positionMs: Long, durationMs: Long, modifier: Modifier = Modif
             color = ProgressFill,
             trackColor = ProgressTrack,
             // A plain bar: no gap before the track and no dot at its end, so it never looks like a slider
-            // you could drag (it can't be: seeking is "Desde el principio" and the transport keys).
+            // you could drag (it can't be: the transport keys are the way to move around).
             gapSize = 0.dp,
             drawStopIndicator = {},
             modifier = Modifier

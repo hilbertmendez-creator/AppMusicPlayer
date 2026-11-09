@@ -5,12 +5,18 @@
     <!-- Inicio -->
     <string name="home_songs">Mis canciones</string>
     <string name="home_playlists">Mis listas</string>
-    <string name="home_search">Buscar</string>
-    <string name="home_sing">Cantar</string>
-    <string name="mini_player_now">Sonando ahora</string>
-    <string name="mini_player_open">Abrir el reproductor</string>
-    <string name="home_text_size_pill">Aa</string>
-    <string name="home_text_size_desc">Aa, Tamaño de letra</string>
+    <string name="tab_home">Inicio</string>
+    <string name="tab_search">Buscar</string>
+    <string name="tab_sing">Cantar</string>
+    <string name="tab_settings">Ajustes</string>
+    <string name="tabs_label">Secciones</string>
+    <string name="tab_current">%1$s, pestaña actual</string>
+    <string name="continue_singing">Seguir cantando</string>
+    <string name="continue_singing_none">Todavía no hay canciones con letra</string>
+    <string name="continue_singing_desc">Seguir cantando: %1$s</string>
+    <string name="mini_player_playing">Sonando</string>
+    <string name="mini_player_paused">En pausa</string>
+    <string name="mini_player_open_titled">Abrir reproductor: %1$s, %2$s</string>
     <string name="update_available">Hay una versión nueva</string>
     <string name="update_tap">Toca aquí para actualizar</string>
     <string name="update_downloading">Descargando la actualización…</string>
@@ -22,21 +28,14 @@
         <item quantity="other">%d listas</item>
     </plurals>
     <string name="home_playlists_none">Ninguna lista todavía</string>
-    <string name="home_search_subtitle">Di o escribe una canción</string>
-    <string name="home_sing_count">%d con letra</string>
-    <string name="home_sing_none">Todavía ninguna con letra</string>
 
     <!-- Comunes -->
     <string name="back">Volver</string>
     <string name="play">Reproducir</string>
     <string name="pause">Pausar</string>
+    <string name="resume">Seguir</string>
     <string name="next">Siguiente</string>
     <string name="previous">Anterior</string>
-    <string name="volume">Volumen</string>
-    <string name="volume_level">Volumen %1$d&#160;de&#160;%2$d</string>
-    <string name="volume_state">%1$d de %2$d</string>
-    <string name="volume_up">Subir el volumen</string>
-    <string name="volume_down">Bajar el volumen</string>
     <string name="delete">Borrar</string>
     <string name="yes_delete">Sí, borrar</string>
     <string name="keep_it">No, conservarla</string>
@@ -45,6 +44,7 @@
     <string name="save">Guardar</string>
     <string name="saved">Guardado</string>
     <string name="sing">Cantar</string>
+    <string name="sing_with_lyrics">Cantar con la letra</string>
     <string name="cover_art">Portada de la canción</string>
     <plurals name="song_count">
         <item quantity="one">%d canción</item>
@@ -129,7 +129,6 @@
     <string name="now_playing_no_lyrics">Esta canción no tiene letra todavía.</string>
     <string name="now_playing_title">Reproduciendo</string>
     <string name="now_playing_progress">Avance de la canción</string>
-    <string name="now_playing_restart">Desde el principio</string>
     <string name="now_playing_progress_spoken">%1$s de %2$s</string>
     <string name="up_next">Sigue: %1$s</string>
     <string name="nothing_playing">No hay nada sonando.</string>
@@ -159,10 +158,23 @@
     <string name="pin_wrong">Ese PIN no es correcto. Prueba otra vez.</string>
     <string name="settings_title">Para quien ayuda</string>
     <string name="change_pin">Cambiar PIN</string>
+    <string name="ajustes_title">Ajustes</string>
+    <string name="font_section">Fuente de la app</string>
+    <string name="font_change">Cambiar fuente</string>
+    <string name="font_done">Listo</string>
+    <string name="font_option_desc">Fuente %1$s</string>
     <string name="text_size_title">Tamaño de letra</string>
-    <string name="text_size_intro">Toca la letra que se ve mejor para ti.</string>
-    <string name="text_size_preview">Así se verá la letra.</string>
     <string name="text_size_chosen">Tamaño elegido: %1$s</string>
+    <string name="text_size_option_desc">Tamaño de letra %1$s</string>
+    <string name="home_text_size_pill">Aa</string>
+    <string name="about_title">Acerca de</string>
+    <string name="about_version">Versión %1$s</string>
+    <string name="update_check">Buscar actualización</string>
+    <string name="update_checking">Buscando actualización…</string>
+    <string name="update_up_to_date">Ya tienes la última versión</string>
+    <string name="update_check_failed">No pudimos buscar. Revisa tu internet e inténtalo otra vez.</string>
+    <string name="update_not_checked">Esta versión de pruebas no busca actualizaciones.</string>
+    <string name="update_install">Actualizar ahora</string>
     <string name="caregiver_entry">Para quien ayuda</string>
     <string name="caregiver_note">Solo para quien configuró la app</string>
     <string name="text_normal">Normal</string>

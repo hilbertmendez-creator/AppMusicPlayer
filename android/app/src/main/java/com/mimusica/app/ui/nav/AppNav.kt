@@ -1,7 +1,28 @@
 package com.mimusica.app.ui.nav
 
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.dp
+import androidx.navigation.compose.currentBackStackEntryAsState
+import com.mimusica.app.ui.components.MiniPlayerBar
+import com.mimusica.app.ui.components.TabBar
+import com.mimusica.app.ui.components.toMiniPlayerUi
+import com.mimusica.app.ui.theme.Page
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -30,7 +51,7 @@ object Routes {
     const val NOW_PLAYING = "now_playing"
     const val PIN = "pin"
     const val SETTINGS = "settings"
-    const val TEXT_SIZE = "text_size"
+    const val AJUSTES = "ajustes"
     const val PLAYLIST_ID = "playlistId"
     const val SONG_ID = "songId"
     const val PLAYLIST = "playlist/{$PLAYLIST_ID}"
@@ -64,6 +85,65 @@ fun AppNav() {
     }
     val start = if (settingsState.settings.isConfigured) Routes.HOME else Routes.SETUP
 
+    val route = nav.currentBackStackEntryAsState().value?.destination?.route
+    val player = container.player
+    val playback by player.state.collectAsStateWithLifecycle()
+    val mini = playback.toMiniPlayerUi()
+    // While the keyboard is up the bar and the mini player step aside: they would float above it and eat the room
+    // the screen needs for the field and the results.
+    val keyboardOpen = WindowInsets.ime.getBottom(LocalDensity.current) > 0
+    val showBar = showsTabBar(route) && !keyboardOpen
+    val showMini = showBar && mini != null && miniPlayerVisible(route, hasSong = true)
+    val goToTab: (MainTab) -> Unit = { tab ->
+        nav.navigate(tab.route) {
+            popUpTo(Routes.HOME) { saveState = true }
+            launchSingleTop = true
+            restoreState = true
+        }
+    }
+
+    // The bottom region (mini player + tab bar) owns the bottom system inset while it is visible; the screens above
+    // it are told that inset is already consumed. Without it, each screen keeps its own safe-drawing padding.
+    Column(modifier = Modifier.fillMaxSize().background(Page)) {
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .then(
+                    if (showBar) Modifier.consumeWindowInsets(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom))
+                    else Modifier,
+                ),
+        ) {
+            AppNavHost(nav, start, settingsVm, goToTab)
+        }
+        if (showBar) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Page)
+                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom)),
+            ) {
+                if (showMini && mini != null) {
+                    MiniPlayerBar(
+                        state = mini,
+                        onOpen = { nav.navigate(Routes.NOW_PLAYING) },
+                        onToggle = player::togglePlayPause,
+                        modifier = Modifier.padding(start = 8.dp, end = 8.dp, top = 8.dp),
+                    )
+                }
+                TabBar(selected = tabFor(route), onSelect = goToTab)
+            }
+        }
+    }
+}
+
+@Composable
+private fun AppNavHost(
+    nav: NavHostController,
+    start: String,
+    settingsVm: SettingsViewModel,
+    goToTab: (MainTab) -> Unit,
+) {
     NavHost(navController = nav, startDestination = start) {
         composable(Routes.SETUP) {
             SetupRoute(settingsVm) {
@@ -72,17 +152,15 @@ fun AppNav() {
         }
         composable(Routes.HOME) {
             HomeRoute(
+                onContinue = { nav.navigate(Routes.karaoke(it)) },
+                onSearch = { goToTab(MainTab.SEARCH) },
                 onSongs = { nav.navigate(Routes.SONGS) },
                 onPlaylists = { nav.navigate(Routes.PLAYLISTS) },
-                onSearch = { nav.navigate(Routes.SEARCH) },
-                onSing = { nav.navigate(Routes.SING) },
-                onSettings = { nav.navigate(Routes.TEXT_SIZE) },
-                onOpenPlayer = { nav.navigate(Routes.NOW_PLAYING) },
             )
         }
         composable(Routes.SEARCH) {
+            // A tab root: reached by the bar, so there is no "Volver".
             SearchRoute(
-                onBack = nav::popBackStack,
                 onPlayerOpen = { nav.navigate(Routes.NOW_PLAYING) },
                 onAddToList = { nav.navigate(Routes.addToList(it)) },
             )
@@ -97,7 +175,7 @@ fun AppNav() {
             SongsRoute(
                 songsVm(),
                 onBack = nav::popBackStack,
-                onSearch = { nav.navigate(Routes.SEARCH) },
+                onSearch = { goToTab(MainTab.SEARCH) },
             ) {
                 nav.navigate(Routes.NOW_PLAYING)
             }
@@ -105,15 +183,14 @@ fun AppNav() {
         composable(Routes.SING) {
             SingRoute(
                 songsVm(),
-                onBack = nav::popBackStack,
                 onSing = { nav.navigate(Routes.karaoke(it)) },
-                onSearch = { nav.navigate(Routes.SEARCH) },
+                onSearch = { goToTab(MainTab.SEARCH) },
             )
         }
         composable(Routes.PLAYLISTS) {
             PlaylistsRoute(playlistsVm(), onBack = nav::popBackStack, onOpen = { nav.navigate(Routes.playlist(it)) })
         }
-        playlistDestinations(nav)
+        playlistDestinations(nav, goToTab)
         composable(Routes.NOW_PLAYING) {
             NowPlayingRoute(onBack = nav::popBackStack, onSing = { nav.navigate(Routes.karaoke(it)) })
         }
@@ -123,14 +200,13 @@ fun AppNav() {
         ) { entry ->
             KaraokeRoute(entry.arguments?.getString(Routes.SONG_ID).orEmpty(), onBack = nav::popBackStack)
         }
-        composable(Routes.TEXT_SIZE) {
-            TextSizeRoute(
+        composable(Routes.AJUSTES) {
+            AjustesRoute(
                 settingsVm,
                 onCaregiver = {
                     settingsVm.lock()
                     nav.navigate(Routes.PIN)
                 },
-                onBack = nav::popBackStack,
             )
         }
         composable(Routes.PIN) {
@@ -149,6 +225,7 @@ fun AppNav() {
 
 private fun androidx.navigation.NavGraphBuilder.playlistDestinations(
     nav: NavHostController,
+    goToTab: (MainTab) -> Unit,
 ) {
     val idArg = listOf(navArgument(Routes.PLAYLIST_ID) { type = NavType.StringType })
     composable(Routes.PLAYLIST, arguments = idArg) { entry ->
@@ -165,7 +242,7 @@ private fun androidx.navigation.NavGraphBuilder.playlistDestinations(
         AddSongsRoute(
             playlistId = entry.arguments?.getString(Routes.PLAYLIST_ID).orEmpty(),
             vm = playlistsVm(),
-            onSearch = { nav.navigate(Routes.SEARCH) },
+            onSearch = { goToTab(MainTab.SEARCH) },
             onDone = nav::popBackStack,
         )
     }

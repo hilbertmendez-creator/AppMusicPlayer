@@ -6,6 +6,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
@@ -42,7 +43,7 @@ class NowPlayingScreenTest {
                 Box(Modifier.size(411.dp, 914.dp)) {
                     NowPlayingScreen(
                         state = state, onToggle = {}, onNext = {}, onPrevious = {},
-                        onVolumeUp = {}, onVolumeDown = {}, onRestart = {}, onSing = {}, onBack = {},
+                        onSing = {}, onBack = {},
                     )
                 }
             }
@@ -52,7 +53,7 @@ class NowPlayingScreenTest {
     @Test
     fun everythingFitsAtNormalTextSize() {
         show(TextScale.NORMAL)
-        listOf("Volver", "Besame Mucho", "Luis Miguel", "Volumen", "Cantar").forEach {
+        listOf("Volver", "Besame Mucho", "Luis Miguel", "Cantar con la letra").forEach {
             compose.onNodeWithText(it).assertIsDisplayed()
         }
     }
@@ -61,7 +62,7 @@ class NowPlayingScreenTest {
     fun singStaysReachableAtExtraLargeText() {
         show(TextScale.EXTRA_LARGE)
         compose.onNodeWithText("Volver").assertIsDisplayed()
-        compose.onNodeWithText("Cantar").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Cantar con la letra").performScrollTo().assertIsDisplayed()
     }
 
     @Test
@@ -100,7 +101,7 @@ class NowPlayingScreenTest {
         assert(widths[1] > widths[0]) { "play/pause should be wider than previous/next: $widths" }
         assertEquals(heights[0], heights[1], 0.5f)
         assertEquals(heights[0], heights[2], 0.5f)
-        assert(heights[0] >= 112f) { "transport keys must be at least 112dp tall, were ${heights[0]}" }
+        assert(heights[0] >= 92f) { "transport keys must be at least 92dp tall, were ${heights[0]}" }
     }
 
     @Test
@@ -113,17 +114,19 @@ class NowPlayingScreenTest {
     }
 
     @Test
-    fun volumeKeysHaveBigTargets() {
+    fun hasNoVolumeKeysAndNoRestartButton() {
         show(TextScale.NORMAL)
         listOf("Bajar el volumen", "Subir el volumen").forEach {
-            compose.onNodeWithContentDescription(it).assertIsDisplayed().assertHeightIsAtLeast(64.dp)
+            compose.onAllNodesWithContentDescription(it).assertCountEquals(0)
         }
+        compose.onAllNodesWithText("Desde el principio").assertCountEquals(0)
+        compose.onAllNodesWithText("Volumen", substring = true).assertCountEquals(0)
     }
 
     @Test
     fun labelFollowsPlayPauseState() {
         show(TextScale.NORMAL, playing.copy(isPlaying = false))
-        compose.onNodeWithText("Reproducir").assertIsDisplayed()
+        compose.onNodeWithText("Seguir").assertIsDisplayed()
     }
 
     @Test
@@ -141,14 +144,14 @@ class NowPlayingScreenTest {
     @Test
     fun everythingStillReachableWithNextLineAtExtraLarge() {
         show(TextScale.EXTRA_LARGE, playing.copy(nextTitle = "Cielito lindo"))
-        compose.onNodeWithText("Cantar").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Cantar con la letra").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Siguiente").performScrollTo().assertIsDisplayed()
     }
 
     @Test
     fun singFitsAtNormalSizeWithTheNextLine() {
         show(TextScale.NORMAL, playing.copy(nextTitle = "Cielito lindo"))
-        compose.onNodeWithText("Cantar").assertIsDisplayed()
+        compose.onNodeWithText("Cantar con la letra").assertIsDisplayed()
     }
 
     @Test
@@ -158,13 +161,13 @@ class NowPlayingScreenTest {
         )
         show(TextScale.NORMAL, noLyrics)
         compose.onNodeWithText("Esta canción no tiene letra todavía.").performScrollTo().assertIsDisplayed()
-        compose.onAllNodesWithText("Cantar").assertCountEquals(0)
+        compose.onAllNodesWithText("Cantar con la letra").assertCountEquals(0)
     }
 
     @Test
     fun withLyricsOffersSingAndNoExplanation() {
         show(TextScale.NORMAL)
-        compose.onNodeWithText("Cantar").assertIsDisplayed()
+        compose.onNodeWithText("Cantar con la letra").assertIsDisplayed()
         compose.onAllNodesWithText("Esta canción no tiene letra todavía.").assertCountEquals(0)
     }
 }

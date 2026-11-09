@@ -11,6 +11,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.text.TextLayoutResult
@@ -21,7 +22,9 @@ import com.mimusica.app.ui.components.ConfirmDeleteDialog
 import com.mimusica.app.ui.home.HomeScreen
 import com.mimusica.app.ui.home.HomeSummary
 import com.mimusica.app.ui.playlists.NewPlaylistDialog
-import com.mimusica.app.ui.settings.TextSizeScreen
+import com.mimusica.app.data.settings.FontChoice
+import com.mimusica.app.ui.settings.AboutUpdateUi
+import com.mimusica.app.ui.settings.AjustesScreen
 import com.mimusica.app.ui.theme.MiMusicaTheme
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -57,15 +60,13 @@ class LargeTextResilienceTest {
             MiMusicaTheme(textScale = TextScale.EXTRA_LARGE) {
                 Box(Modifier.size(360.dp, 640.dp)) {
                     HomeScreen(
-                        miniPlayer = null,
                         summary = HomeSummary(songs = 0, playlists = 0, singable = 0),
-                        onSongs = {}, onPlaylists = {}, onSearch = {}, onSing = {},
-                        onSettings = {}, onMiniPlayer = {}, onMiniToggle = {},
+                        onContinue = {}, onSearch = {}, onSongs = {}, onPlaylists = {},
                     )
                 }
             }
         }
-        listOf("Todavía no tienes canciones", "Ninguna lista todavía", "Todavía ninguna con letra").forEach {
+        listOf("Todavía no tienes canciones", "Ninguna lista todavía").forEach {
             val subtitle = compose.onNodeWithText(it, useUnmergedTree = true).performScrollTo()
             assertFalse("\"$it\" must not be cut off", layoutOf(subtitle).hasVisualOverflow)
         }
@@ -101,21 +102,32 @@ class LargeTextResilienceTest {
         compose.onNodeWithText("Hablar").performScrollTo().assertIsDisplayed()
     }
 
-    // --- Text size previews follow the same cap as the real setting -----------------------------------------
+    // --- Ajustes: size samples follow the same cap as the real setting ---------------------------------------
 
     @Test
-    fun everyPreviewRowIsCappedAtTheCombinedScaleOfTheRealSetting() {
+    fun everySizeSampleIsCappedAtTheCombinedScaleOfTheRealSetting() {
         withOsFontScale(2f) {
             MiMusicaTheme(textScale = TextScale.NORMAL) {
-                TextSizeScreen(current = TextScale.NORMAL, onSelect = {}, onCaregiver = {}, onBack = {})
+                AjustesScreen(
+                    fontChoice = FontChoice.SYSTEM,
+                    textScale = TextScale.NORMAL,
+                    versionName = "0.1.0",
+                    updateUi = AboutUpdateUi.Idle,
+                    onSelectFont = {},
+                    onSelectTextScale = {},
+                    onCheckUpdate = {},
+                    onInstallUpdate = {},
+                    onCaregiver = {},
+                    onBack = {},
+                )
             }
         }
-        val previews = compose.onAllNodesWithText("Así se verá la letra.", useUnmergedTree = true)
-        for (i in 0 until 3) {
-            val result = layoutOf(previews[i])
+        TextScale.entries.forEach { scale ->
+            val node = compose.onNodeWithTag("size_sample_${scale.name}", useUnmergedTree = true).performScrollTo()
+            val result = layoutOf(node)
             val drawnSp = result.layoutInput.style.fontSize.value * result.layoutInput.density.fontScale
             // 22sp x the 1.6 combined cap is the most any option may be drawn at.
-            assertTrue("preview $i is drawn at $drawnSp sp", drawnSp <= 22f * 1.6f + 0.1f)
+            assertTrue("sample ${scale.name} is drawn at $drawnSp sp", drawnSp <= 22f * 1.6f + 0.1f)
         }
     }
 }

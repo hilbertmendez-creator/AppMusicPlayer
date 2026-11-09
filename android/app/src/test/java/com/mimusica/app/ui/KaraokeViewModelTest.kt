@@ -3,6 +3,7 @@ package com.mimusica.app.ui
 import com.mimusica.app.data.LibraryRepository
 import com.mimusica.app.data.local.LyricsEntity
 import com.mimusica.app.data.local.toEntity
+import com.mimusica.app.fakes.FakeLastSung
 import com.mimusica.app.fakes.FakePlayer
 import com.mimusica.app.fakes.FakePlaylistDao
 import com.mimusica.app.fakes.FakeRemote
@@ -172,5 +173,23 @@ class KaraokeViewModelTest {
         advanceUntilIdle()
 
         assertEquals(false, vm.uiState.value.isPlaying)
+    }
+
+    @Test
+    fun `a song that has lyrics is remembered as the last one sung`() = runTest {
+        seed("a", lrc, null)
+        val lastSung = FakeLastSung()
+        KaraokeViewModel("a", library, player, lastSung)
+        advanceUntilIdle()
+        assertEquals("a", lastSung.value)
+    }
+
+    @Test
+    fun `a song without lyrics is not remembered`() = runTest {
+        seed("a", null, null)
+        val lastSung = FakeLastSung()
+        KaraokeViewModel("a", library, player, lastSung)
+        advanceUntilIdle()
+        assertEquals(null, lastSung.value)
     }
 }
