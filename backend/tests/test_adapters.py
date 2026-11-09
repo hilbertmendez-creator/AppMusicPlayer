@@ -57,6 +57,47 @@ def test_lrclib_falls_back_to_search_and_picks_closest_duration():
     assert out.synced_lrc is None and out.plain == "near"
 
 
+def _search_handler(candidates):
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/api/get":
+            return httpx.Response(404, json={})
+        return httpx.Response(200, json=candidates)
+
+    return handler
+
+
+def test_lrclib_search_prefers_synced_version_with_same_duration():
+    handler = _search_handler(
+        [
+            {"duration": 289, "syncedLyrics": "[00:01.00]lejos", "plainLyrics": "lejos"},
+            {"duration": 256, "syncedLyrics": "[00:01.00]igual", "plainLyrics": "igual"},
+            {"duration": 255, "syncedLyrics": None, "plainLyrics": "sin tiempos"},
+        ]
+    )
+    out = lrclib(handler).get("Lamento Borincano", "Daniel Santos", 256)
+    assert out.synced_lrc == "[00:01.00]igual"
+
+
+def test_lrclib_search_drops_timestamps_of_a_different_length_recording():
+    # 10 s of difference: the LRC would be out of sync, so only the words are kept.
+    handler = _search_handler(
+        [{"duration": 266, "syncedLyrics": "[00:01.00]uno\n[00:05.00]dos", "plainLyrics": None}]
+    )
+    out = lrclib(handler).get("Lamento Borincano", "Daniel Santos", 256)
+    assert out.synced_lrc is None
+    assert out.plain == "uno\ndos"
+
+
+def test_lrclib_get_drops_timestamps_when_duration_is_far_off():
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200, json={"duration": 300, "syncedLyrics": "[00:01.00]hi", "plainLyrics": "hi"}
+        )
+
+    out = lrclib(handler).get("Song", "Artist", 200)
+    assert out.synced_lrc is None and out.plain == "hi"
+
+
 def test_lrclib_returns_none_when_nothing_found():
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path == "/api/get":
