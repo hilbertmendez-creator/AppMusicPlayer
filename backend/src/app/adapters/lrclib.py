@@ -24,6 +24,25 @@ def _to_lyrics(item: dict) -> Lyrics | None:
 
 
 _LRC_TIMESTAMP = re.compile(r"\[\d{1,3}:\d{2}(?:[.:]\d{1,3})?\]")
+_LRC_SECONDS = re.compile(r"\[(\d{1,3}):(\d{2})(?:[.:](\d{1,3}))?\]")
+
+
+def _last_timestamp(synced: str) -> float:
+    """Time of the last line of an LRC body, in seconds (0 when it has no timestamps)."""
+    last = 0.0
+    for m in _LRC_SECONDS.finditer(synced):
+        fraction = float(f"0.{m.group(3)}") if m.group(3) else 0.0
+        last = max(last, int(m.group(1)) * 60 + int(m.group(2)) + fraction)
+    return last
+
+
+def _fits(synced: str, duration_seconds: int) -> bool:
+    """False when the lyrics have lines after the audio ends: they were timed on a longer recording.
+
+    LRCLIB entries often carry the timestamps of another version while declaring the duration of
+    this one, so the declared duration alone cannot be trusted.
+    """
+    return _last_timestamp(synced) <= duration_seconds + MAX_SYNC_DRIFT_SECONDS
 
 
 def _strip_lrc(synced: str) -> str:
@@ -63,14 +82,11 @@ class LrclibProvider:
         resp.raise_for_status()
         item = resp.json()
         lyrics = _to_lyrics(item)
-        # /api/get already matches on duration; re-check only when LRCLIB tells us the length.
-        if (
-            lyrics is not None
-            and lyrics.synced_lrc
-            and duration_seconds
-            and item.get("duration")
-            and _drift(item, duration_seconds) > MAX_SYNC_DRIFT_SECONDS
-        ):
+        if lyrics is None or not lyrics.synced_lrc or not duration_seconds:
+            return lyrics
+        # /api/get already matches on duration; re-check the length only when LRCLIB tells us.
+        too_far = item.get("duration") and _drift(item, duration_seconds) > MAX_SYNC_DRIFT_SECONDS
+        if too_far or not _fits(lyrics.synced_lrc, duration_seconds):
             return _plain_only(lyrics)
         return lyrics
 
@@ -91,7 +107,9 @@ class LrclibProvider:
         in_sync = [
             c
             for c in candidates
-            if c.get("syncedLyrics") and _drift(c, duration_seconds) <= MAX_SYNC_DRIFT_SECONDS
+            if c.get("syncedLyrics")
+            and _drift(c, duration_seconds) <= MAX_SYNC_DRIFT_SECONDS
+            and _fits(c["syncedLyrics"], duration_seconds)
         ]
         if in_sync:
             return _to_lyrics(min(in_sync, key=lambda c: _drift(c, duration_seconds)))
