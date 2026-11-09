@@ -45,6 +45,12 @@ object UpdateParser {
     const val LATEST_RELEASE_URL =
         "https://api.github.com/repos/hilbertmendez-creator/AppMusicPlayer/releases/latest"
 
+    /**
+     * Same answer without GitHub's API: this page redirects to `.../releases/tag/build-N`. The API allows only
+     * 60 requests per hour per IP address, and phone networks share addresses, so it often refuses.
+     */
+    const val LATEST_PAGE_URL = "https://github.com/hilbertmendez-creator/AppMusicPlayer/releases/latest"
+
     /** The APK is only trusted if it comes from this repository's releases (it is also signature-checked by Android). */
     const val ALLOWED_DOWNLOAD_PREFIX =
         "https://github.com/hilbertmendez-creator/AppMusicPlayer/releases/download/"
@@ -66,6 +72,13 @@ object UpdateParser {
         val apk = release.assets.firstOrNull { it.name == APK_NAME } ?: return null
         if (!apk.url.startsWith(ALLOWED_DOWNLOAD_PREFIX)) return null
         return AppUpdate(code, apk.url)
+    }
+
+    /** From the redirect of [LATEST_PAGE_URL] (its `Location` header). Null if it is not one of our tags. */
+    fun parseLatestRedirect(location: String?): AppUpdate? {
+        val tag = location?.substringAfterLast("/releases/tag/", missingDelimiterValue = "")?.substringBefore('?')
+        val code = tagPattern.matchEntire(tag.orEmpty())?.groupValues?.get(1)?.toIntOrNull() ?: return null
+        return AppUpdate(code, "${ALLOWED_DOWNLOAD_PREFIX}$tag/$APK_NAME")
     }
 
     /** [update] only if it is strictly newer than the installed build; Android refuses same-or-older installs. */

@@ -46,4 +46,17 @@ class UpdateParserTest {
         assertNull(UpdateParser.newerThan(update, currentVersionCode = 121))
         assertNull(UpdateParser.newerThan(null, currentVersionCode = 1))
     }
+
+    @Test
+    fun `reads the build from the latest page redirect`() {
+        val location = "https://github.com/hilbertmendez-creator/AppMusicPlayer/releases/tag/build-120"
+        assertEquals(AppUpdate(120, goodUrl), UpdateParser.parseLatestRedirect(location))
+    }
+
+    @Test
+    fun `ignores a redirect that is not one of our tags`() {
+        assertNull(UpdateParser.parseLatestRedirect(null))
+        assertNull(UpdateParser.parseLatestRedirect("https://github.com/login"))
+        assertNull(UpdateParser.parseLatestRedirect("https://github.com/x/y/releases/tag/v1.0"))
+    }
 }
