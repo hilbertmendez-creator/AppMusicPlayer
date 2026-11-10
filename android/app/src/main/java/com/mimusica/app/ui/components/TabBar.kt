@@ -40,9 +40,9 @@ import com.mimusica.app.ui.nav.MainTab
 import com.mimusica.app.ui.nav.tabLabelSizeSp
 import com.mimusica.app.ui.theme.Ink
 import com.mimusica.app.ui.theme.InkSoft
-import com.mimusica.app.ui.theme.Line
+import com.mimusica.app.ui.theme.TabLine
 import com.mimusica.app.ui.theme.Navy
-import com.mimusica.app.ui.theme.Page
+import com.mimusica.app.ui.theme.Card
 import com.mimusica.app.ui.theme.SectionSearch
 import com.mimusica.app.ui.theme.SectionSettings
 import com.mimusica.app.ui.theme.SectionSing
@@ -66,8 +66,8 @@ private fun MainTab.look() = when (this) {
 @Composable
 fun TabBar(selected: MainTab?, onSelect: (MainTab) -> Unit, modifier: Modifier = Modifier) {
     val groupName = stringResource(R.string.tabs_label)
-    Column(modifier = modifier.fillMaxWidth().background(Page)) {
-        Box(modifier = Modifier.fillMaxWidth().height(2.dp).background(Line))
+    Column(modifier = modifier.fillMaxWidth().background(Card)) {
+        Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(TabLine))
         Row(
             modifier = Modifier
                 .fillMaxWidth()

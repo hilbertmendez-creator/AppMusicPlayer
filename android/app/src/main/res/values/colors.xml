@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- White page: window, splash and Compose background all share this value (see Theme.kt Page). -->
-    <color name="paper">#FFFFFFFF</color>
+    <!-- Soft grey page: window, splash and Compose background all share this value (see Theme.kt Page). -->
+    <color name="paper">#FFF4F6F9</color>
     <color name="ic_launcher_background">#FF6A1B6B</color>
 </resources>

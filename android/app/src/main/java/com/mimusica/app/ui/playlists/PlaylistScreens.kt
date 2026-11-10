@@ -54,7 +54,10 @@ import com.mimusica.app.ui.components.MessageBanner
 import com.mimusica.app.ui.components.MinTouch
 import com.mimusica.app.ui.components.OutlineBigButton
 import com.mimusica.app.ui.components.RowCard
+import com.mimusica.app.ui.components.LazyScreenScaffold
 import com.mimusica.app.ui.components.ScreenScaffold
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import com.mimusica.app.ui.components.SectionAccents
 import com.mimusica.app.ui.state.UiError
 
@@ -187,14 +190,17 @@ fun PlaylistDetailScreen(
 ) {
     var pendingRemove by remember { mutableStateOf<Song?>(null) }
     var confirmDeleteList by remember { mutableStateOf(false) }
-    ScreenScaffold(title = playlist.name, onBack = onBack, modifier = modifier, accent = SectionAccents.Playlists) {
-        error?.let { ErrorBanner(it) }
+    LazyScreenScaffold(title = playlist.name, onBack = onBack, modifier = modifier, accent = SectionAccents.Playlists) {
+        error?.let { item(key = "error") { ErrorBanner(it) } }
         if (songs.isNotEmpty()) {
-            BigButton(stringResource(R.string.play_all), onPlayAll, icon = Icons.Filled.PlayArrow)
+            item(key = "play-all") {
+                BigButton(stringResource(R.string.play_all), onPlayAll, icon = Icons.Filled.PlayArrow)
+            }
         } else {
-            EmptyMessage(stringResource(R.string.playlist_empty_songs))
+            item(key = "empty") { EmptyMessage(stringResource(R.string.playlist_empty_songs)) }
         }
-        songs.forEachIndexed { index, song ->
+        // A list may hold the same song twice (the server does not forbid it); LazyColumn crashes on duplicate keys.
+        itemsIndexed(songs, key = { index, song -> "$index-${song.id}" }) { index, song ->
             RowCard {
                 Column(
                     modifier = Modifier
@@ -231,20 +237,26 @@ fun PlaylistDetailScreen(
                 )
             }
         }
-        OutlineBigButton(
-            stringResource(R.string.add_songs),
-            onAddSongs,
-            icon = Icons.Filled.Add,
-            minHeight = 72.dp,
-            color = MaterialTheme.colorScheme.primary,
-        )
-        Spacer(Modifier.height(8.dp))
-        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
-        DemotedDangerAction(
-            stringResource(R.string.delete_playlist),
-            { confirmDeleteList = true },
-            icon = Icons.Filled.Delete,
-        )
+        item(key = "add-songs") {
+            OutlineBigButton(
+                stringResource(R.string.add_songs),
+                onAddSongs,
+                icon = Icons.Filled.Add,
+                minHeight = 72.dp,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
+        item(key = "delete-list") {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Spacer(Modifier.height(8.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+                DemotedDangerAction(
+                    stringResource(R.string.delete_playlist),
+                    { confirmDeleteList = true },
+                    icon = Icons.Filled.Delete,
+                )
+            }
+        }
     }
     pendingRemove?.let { song ->
         ConfirmDeleteDialog(
@@ -279,16 +291,18 @@ fun AddSongsScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    ScreenScaffold(title = stringResource(R.string.add_songs_title), onBack = onBack, modifier = modifier) {
+    LazyScreenScaffold(title = stringResource(R.string.add_songs_title), onBack = onBack, modifier = modifier) {
         if (candidates.isEmpty()) {
-            EmptyMessage(
-                text = stringResource(R.string.add_none),
-                actionText = stringResource(R.string.add_none_action),
-                onAction = onSearch,
-                actionIcon = Icons.Filled.Search,
-            )
+            item(key = "none") {
+                EmptyMessage(
+                    text = stringResource(R.string.add_none),
+                    actionText = stringResource(R.string.add_none_action),
+                    onAction = onSearch,
+                    actionIcon = Icons.Filled.Search,
+                )
+            }
         }
-        candidates.forEach { song ->
+        items(candidates, key = { it.id }) { song ->
             val checked = song.id in selected
             Surface(
                 modifier = Modifier
@@ -329,7 +343,9 @@ fun AddSongsScreen(
             }
         }
         if (selected.isNotEmpty()) {
-            BigButton(stringResource(R.string.add_selected, selected.size), onConfirm, icon = Icons.Filled.Add)
+            item(key = "confirm") {
+                BigButton(stringResource(R.string.add_selected, selected.size), onConfirm, icon = Icons.Filled.Add)
+            }
         }
     }
 }
