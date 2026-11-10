@@ -45,7 +45,7 @@ import com.mimusica.app.ui.theme.InkSoft
 import com.mimusica.app.ui.theme.MiMusicaTheme
 import com.mimusica.app.ui.theme.Navy
 import com.mimusica.app.ui.theme.OnNavy
-import com.mimusica.app.ui.theme.SurfaceFill
+import com.mimusica.app.ui.theme.Card
 
 /** Minimum heights of the hero card and of the two list rows. */
 val HeroMinHeight = 96.dp
@@ -211,8 +211,9 @@ private fun HomeRow(
             .heightIn(min = HomeRowMinHeight)
             .semantics { role = Role.Button },
         shape = RoundedCornerShape(18.dp),
-        color = SurfaceFill,
+        color = Card,
         contentColor = MaterialTheme.colorScheme.onSurface,
+        shadowElevation = 2.dp,
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),

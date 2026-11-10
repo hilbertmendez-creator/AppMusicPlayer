@@ -18,7 +18,7 @@ import com.mimusica.app.data.settings.FontChoice
 import com.mimusica.app.data.settings.TextScale
 
 /*
- * White page, cool-grey surfaces and one navy for every action. Every text/background pair is >= 7:1 (WCAG AAA),
+ * Soft cool-grey page, white cards and one navy for every action. Every text/background pair is >= 7:1 (WCAG AAA),
  * checked by PaletteContrastTest. Colour meanings are fixed:
  *   navy  = every action button (and the "Mis canciones" tile)
  *   sun   = the active tab and "Cantar con la letra"
@@ -26,12 +26,13 @@ import com.mimusica.app.data.settings.TextScale
  *   red   = delete / error only
  * Section colours are icon and bar fills only, never text.
  */
-val Page = Color(0xFFFFFFFF)
+val Page = Color(0xFFF4F6F9)
 val SurfaceFill = Color(0xFFF2F5F9)
 val Ink = Color(0xFF0F2742)
 val InkSoft = Color(0xFF3D516B)
 val Line = Color(0xFFC5CFDB)
-val Navy = Color(0xFF123C69)
+val Navy = Color(0xFF275887)
+val NavyPressed = Color(0xFF1F4A74)
 val OnNavy = Color(0xFFFFFFFF)
 val Sun = Color(0xFFFFD166)
 val SunSoft = Color(0xFFFFE7A8)
@@ -43,14 +44,19 @@ val SectionSearch = Color(0xFF00585C)
 val SectionSing = Color(0xFF7A3E00)
 val SectionSettings = Color(0xFF374151)
 val ChipBg = Color(0xFFE3ECFA)
-val CoverBg = Color(0xFFDCE6F2)
+val CoverBg = Color(0xFFE3EDF8)
+val CardDivider = Color(0xFFE3E8EF)
+val DangerSoft = Color(0xFFFBEDED)
+val FieldOutline = Color(0xFF7B8794)
+val TabLine = Color(0xFFDCE3EC)
 
 // Thin aliases kept so the many existing call sites keep compiling; new code uses the names above.
 val OnSolid = OnNavy
 
 /** Window / splash background. Must equal `@color/paper` so there is no white flash. */
 val Paper = Page
-val Card = Page
+/** Cards are white on the tinted [Page]; they stand apart by space and shadow, not by a dark outline. */
+val Card = Color(0xFFFFFFFF)
 val Outline = InkSoft
 val DeepBlue = Navy
 val SoftBlue = ChipBg
@@ -78,7 +84,7 @@ private val AppColors = lightColorScheme(
     onSecondary = OnNavy,
     background = Page,
     onBackground = Ink,
-    surface = Page,
+    surface = Card,
     onSurface = Ink,
     surfaceVariant = SurfaceFill,
     onSurfaceVariant = Ink,

@@ -2,14 +2,19 @@ package com.mimusica.app.ui
 
 import androidx.compose.ui.graphics.Color
 import com.mimusica.app.ui.components.SectionAccents
+import com.mimusica.app.ui.theme.CardDivider
+import com.mimusica.app.ui.theme.Card
 import com.mimusica.app.ui.theme.ChipBg
 import com.mimusica.app.ui.theme.CoverBg
 import com.mimusica.app.ui.theme.Danger
+import com.mimusica.app.ui.theme.DangerSoft
+import com.mimusica.app.ui.theme.FieldOutline
 import com.mimusica.app.ui.theme.DeepBlue
 import com.mimusica.app.ui.theme.Ink
 import com.mimusica.app.ui.theme.InkSoft
 import com.mimusica.app.ui.theme.Line
 import com.mimusica.app.ui.theme.Navy
+import com.mimusica.app.ui.theme.NavyPressed
 import com.mimusica.app.ui.theme.OnNavy
 import com.mimusica.app.ui.theme.Page
 import com.mimusica.app.ui.theme.Paper
@@ -52,12 +57,17 @@ class PaletteContrastTest {
 
     @Test
     fun `palette tokens carry the agreed values`() {
-        assertEquals(Color(0xFFFFFFFF), Page)
+        assertEquals(Color(0xFFF4F6F9), Page)
+        assertEquals(Color(0xFFFFFFFF), Card)
+        assertEquals(Color(0xFFE3E8EF), CardDivider)
+        assertEquals(Color(0xFFFBEDED), DangerSoft)
+        assertEquals(Color(0xFF7B8794), FieldOutline)
         assertEquals(Color(0xFFF2F5F9), SurfaceFill)
         assertEquals(Color(0xFF0F2742), Ink)
         assertEquals(Color(0xFF3D516B), InkSoft)
         assertEquals(Color(0xFFC5CFDB), Line)
-        assertEquals(Color(0xFF123C69), Navy)
+        // Lightest blue that still gives white text 7:1 (the handoff's #2D64A0 is only ~6.1:1).
+        assertEquals(Color(0xFF275887), Navy)
         assertEquals(Color(0xFFFFFFFF), OnNavy)
         assertEquals(Color(0xFFFFD166), Sun)
         assertEquals(Color(0xFFFFE7A8), SunSoft)
@@ -69,7 +79,7 @@ class PaletteContrastTest {
         assertEquals(Color(0xFF7A3E00), SectionSing)
         assertEquals(Color(0xFF374151), SectionSettings)
         assertEquals(Color(0xFFE3ECFA), ChipBg)
-        assertEquals(Color(0xFFDCE6F2), CoverBg)
+        assertEquals(Color(0xFFE3EDF8), CoverBg)
     }
 
     @Test
@@ -84,11 +94,23 @@ class PaletteContrastTest {
         assertAaa("InkSoft on Page", InkSoft, Page)
         assertAaa("InkSoft on Surface", InkSoft, SurfaceFill)
         assertAaa("Ink on ChipBg", Ink, ChipBg)
+        assertAaa("Ink on Card", Ink, Card)
+        assertAaa("InkSoft on Card", InkSoft, Card)
+    }
+
+    @Test
+    fun `card sits apart from the page and the danger tint keeps its text readable`() {
+        assertTrue("Card must differ from Page", Card != Page)
+        assertAaa("Danger on DangerSoft", Danger, DangerSoft)
+        assertAaa("OnNavy on NavyPressed", OnNavy, NavyPressed)
+        assertNonText("FieldOutline on Page", FieldOutline, Page)
+        assertNonText("FieldOutline on Card", FieldOutline, Card)
     }
 
     @Test
     fun `action buttons and the sun highlights carry readable text`() {
         assertAaa("OnNavy on Navy", OnNavy, Navy)
+        assertAaa("Navy on Card", Navy, Card)
         assertAaa("Ink on Sun", Ink, Sun)
         assertAaa("Ink on SunSoft", Ink, SunSoft)
         assertEquals(Navy, DeepBlue)

@@ -1,7 +1,6 @@
 package com.mimusica.app.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -19,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -29,8 +29,8 @@ import androidx.compose.ui.unit.dp
 import com.mimusica.app.R
 import com.mimusica.app.domain.player.PlaybackState
 import com.mimusica.app.ui.theme.InkSoft
-import com.mimusica.app.ui.theme.Line
-import com.mimusica.app.ui.theme.SurfaceFill
+import com.mimusica.app.ui.theme.Card
+import com.mimusica.app.ui.theme.Ink
 
 /** What the persistent mini player shows: the song that is loaded and whether it is playing. */
 data class MiniPlayerUi(
@@ -57,8 +57,8 @@ fun MiniPlayerBar(state: MiniPlayerUi, onOpen: () -> Unit, onToggle: () -> Unit,
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .background(SurfaceFill, shape)
-            .border(2.dp, Line, shape)
+            .shadow(6.dp, shape, ambientColor = Ink.copy(alpha = 0.08f), spotColor = Ink.copy(alpha = 0.12f))
+            .background(Card, shape)
             .padding(8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),

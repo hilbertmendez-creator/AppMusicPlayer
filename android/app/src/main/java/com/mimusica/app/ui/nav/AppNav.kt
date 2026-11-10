@@ -22,6 +22,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import com.mimusica.app.ui.components.MiniPlayerBar
 import com.mimusica.app.ui.components.TabBar
 import com.mimusica.app.ui.components.toMiniPlayerUi
+import com.mimusica.app.ui.theme.Card
 import com.mimusica.app.ui.theme.Page
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.getValue
@@ -120,7 +121,7 @@ fun AppNav() {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Page)
+                    .background(Card)
                     .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom)),
             ) {
                 if (showMini && mini != null) {

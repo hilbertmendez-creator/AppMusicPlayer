@@ -19,6 +19,8 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -58,6 +60,19 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.mimusica.app.R
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material3.TextButton
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.text.font.FontWeight
+import com.mimusica.app.ui.theme.Card
+import com.mimusica.app.ui.theme.Ink
+import com.mimusica.app.ui.theme.Danger
+import com.mimusica.app.ui.theme.DangerSoft
+import com.mimusica.app.ui.theme.Line
 import com.mimusica.app.ui.state.UiError
 import com.mimusica.app.ui.theme.OnSolid
 import com.mimusica.app.ui.theme.Success
@@ -88,7 +103,7 @@ fun BigButton(
             .fillMaxWidth()
             .heightIn(min = minHeight)
             .then(if (description != null) Modifier.semantics { contentDescription = description } else Modifier),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(20.dp),
         contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
         colors = ButtonDefaults.buttonColors(containerColor = containerColor, contentColor = contentColor),
     ) {
@@ -177,10 +192,14 @@ fun BackButton(onClick: () -> Unit, modifier: Modifier = Modifier, dark: Boolean
     OutlinedButton(
         onClick = onClick,
         modifier = modifier.heightIn(min = MinTouch),
-        shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, color),
-        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
-        colors = ButtonDefaults.outlinedButtonColors(contentColor = color),
+        shape = RoundedCornerShape(20.dp),
+        // Light screens: a white pill with a hairline; the dark karaoke screen keeps its white outline.
+        border = BorderStroke(1.dp, if (dark) color else Line),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+        colors = ButtonDefaults.outlinedButtonColors(
+            contentColor = color,
+            containerColor = if (dark) Color.Transparent else Color.White,
+        ),
     ) {
         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, modifier = Modifier.size(26.dp))
         Spacer(Modifier.width(8.dp))
@@ -280,6 +299,53 @@ fun ScreenScaffold(
     accent: SectionAccent? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    ScaffoldFrame(title, onBack, modifier, accent) {
+        val bodyModifier = if (scrollable) {
+            Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+        } else {
+            Modifier
+                .weight(1f)
+                .fillMaxWidth()
+        }
+        Column(modifier = bodyModifier, verticalArrangement = Arrangement.spacedBy(16.dp), content = content)
+    }
+}
+
+/**
+ * [ScreenScaffold] for screens whose content can grow without bound (the song library, a long playlist): the body
+ * is a [LazyColumn], so only the rows on screen are composed and their covers loaded. Same header, insets and
+ * 16dp rhythm as [ScreenScaffold]; add every row through `item` / `items` with a stable key.
+ */
+@Composable
+fun LazyScreenScaffold(
+    title: String,
+    onBack: (() -> Unit)?,
+    modifier: Modifier = Modifier,
+    accent: SectionAccent? = null,
+    content: LazyListScope.() -> Unit,
+) {
+    ScaffoldFrame(title, onBack, modifier, accent) {
+        LazyColumn(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            content = content,
+        )
+    }
+}
+
+@Composable
+private fun ScaffoldFrame(
+    title: String,
+    onBack: (() -> Unit)?,
+    modifier: Modifier,
+    accent: SectionAccent?,
+    body: @Composable ColumnScope.() -> Unit,
+) {
     Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(
             modifier = Modifier
@@ -294,22 +360,12 @@ fun ScreenScaffold(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(6.dp)
-                            .background(accent.color, RoundedCornerShape(3.dp)),
+                            .height(4.dp)
+                            .background(accent.color, RoundedCornerShape(2.dp)),
                     )
                 }
             }
-            val bodyModifier = if (scrollable) {
-                Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
-            } else {
-                Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-            }
-            Column(modifier = bodyModifier, verticalArrangement = Arrangement.spacedBy(16.dp), content = content)
+            body()
         }
     }
 }
@@ -531,18 +587,21 @@ fun TagChip(text: String, modifier: Modifier = Modifier) {
     }
 }
 
-/** Card container used for list rows: a slightly lighter surface with the outline kept. */
+/**
+ * Card container used for list rows: a white card floating on the tinted page, separated by space and a soft
+ * shadow instead of a dark outline.
+ */
 @Composable
 fun RowCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
-    // A 2dp dark outline plus a soft shadow: white cards on a pale page must read as separate pieces at a glance.
+    val shape = RoundedCornerShape(24.dp)
     Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(2.dp, MaterialTheme.colorScheme.outline),
-        shadowElevation = 4.dp,
+        modifier = modifier
+            .fillMaxWidth()
+            .shadow(8.dp, shape, ambientColor = Ink.copy(alpha = 0.06f), spotColor = Ink.copy(alpha = 0.10f)),
+        shape = shape,
+        color = Card,
     ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp), content = content)
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp), content = content)
     }
 }
 
@@ -659,5 +718,38 @@ fun DangerOutlineButton(text: String, onClick: () -> Unit, modifier: Modifier = 
         colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
     ) {
         Text(text, style = MaterialTheme.typography.labelMedium)
+    }
+}
+
+/**
+ * Borderless red "Borrar" for a card: a trash icon and a bold word, 64dp tall, with a faint red wash while pressed.
+ * Quieter than [DangerOutlineButton] so a card's one real action ("Reproducir") stays the loudest thing on it.
+ */
+@Composable
+fun DangerTextButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    description: String? = null,
+) {
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    TextButton(
+        onClick = onClick,
+        modifier = modifier
+            .heightIn(min = MinTouch)
+            .then(if (description != null) Modifier.semantics { contentDescription = description } else Modifier),
+        shape = RoundedCornerShape(20.dp),
+        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+        colors = ButtonDefaults.textButtonColors(
+            containerColor = if (pressed) DangerSoft else Color.Transparent,
+            contentColor = Danger,
+        ),
+        interactionSource = interaction,
+    ) {
+        // Decorative: the text next to it names the action.
+        Icon(Icons.Outlined.Delete, contentDescription = null, modifier = Modifier.size(26.dp))
+        Spacer(Modifier.width(8.dp))
+        Text(text, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
     }
 }

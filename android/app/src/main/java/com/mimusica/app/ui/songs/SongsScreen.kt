@@ -27,19 +27,28 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.mimusica.app.R
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import com.mimusica.app.ui.components.DangerTextButton
+import com.mimusica.app.ui.theme.CardDivider
+import com.mimusica.app.ui.theme.FieldOutline
+import com.mimusica.app.ui.theme.InkSoft
 import com.mimusica.app.domain.model.Song
 import com.mimusica.app.ui.components.Artwork
 import com.mimusica.app.ui.components.BigButton
 import com.mimusica.app.ui.components.BigIconButton
 import com.mimusica.app.ui.components.ConfirmDeleteDialog
-import com.mimusica.app.ui.components.DangerOutlineButton
 import com.mimusica.app.ui.components.EmptyMessage
 import com.mimusica.app.ui.components.ErrorBanner
 import com.mimusica.app.ui.components.MessageBanner
 import com.mimusica.app.ui.components.MinTouch
-import com.mimusica.app.ui.components.PrimaryWithSecondary
 import com.mimusica.app.ui.components.RowCard
-import com.mimusica.app.ui.components.ScreenScaffold
+import com.mimusica.app.ui.components.LazyScreenScaffold
+import androidx.compose.foundation.lazy.itemsIndexed
 import com.mimusica.app.ui.components.SectionAccents
 import com.mimusica.app.ui.state.UiError
 
@@ -68,43 +77,54 @@ fun SongsScreen(
     // [songs] is the whole library; what is shown (and what [onPlay] indexes into) is the filtered list.
     val shown = filterSongs(songs, query)
     var pendingDelete by remember { mutableStateOf<Song?>(null) }
-    ScreenScaffold(
+    // The library has no upper bound, so rows are lazy: only the visible cards (and their covers) are composed.
+    LazyScreenScaffold(
         title = stringResource(R.string.songs_title),
         onBack = onBack,
         modifier = modifier,
         accent = SectionAccents.Songs,
     ) {
-        error?.let { ErrorBanner(it) }
+        error?.let { item(key = "error") { ErrorBanner(it) } }
         // Polite live region inside MessageBanner: TalkBack says it once the delete went through.
-        deletedTitle?.let { MessageBanner(stringResource(R.string.song_deleted, it), isError = false) }
+        deletedTitle?.let {
+            item(key = "deleted") { MessageBanner(stringResource(R.string.song_deleted, it), isError = false) }
+        }
         if (songs.isEmpty()) {
-            EmptyMessage(
-                text = stringResource(R.string.songs_empty),
-                actionText = stringResource(R.string.songs_empty_action),
-                onAction = onSearch,
-                actionIcon = Icons.Filled.Search,
-            )
+            item(key = "empty") {
+                EmptyMessage(
+                    text = stringResource(R.string.songs_empty),
+                    actionText = stringResource(R.string.songs_empty_action),
+                    onAction = onSearch,
+                    actionIcon = Icons.Filled.Search,
+                )
+            }
         }
         if (songs.size >= 2) {
-            SongsFilter(query, onQueryChange, onMic)
-            if (micMessage) MessageBanner(stringResource(R.string.mic_unavailable))
+            item(key = "filter") { SongsFilter(query, onQueryChange, onMic) }
+            if (micMessage) item(key = "mic") { MessageBanner(stringResource(R.string.mic_unavailable)) }
         }
         if (songs.size >= 2 && shown.isEmpty()) {
-            EmptyMessage(
-                text = stringResource(R.string.songs_filter_none),
-                actionText = stringResource(R.string.songs_filter_clear),
-                onAction = { onQueryChange("") },
-                live = true,
-            )
+            item(key = "no-match") {
+                EmptyMessage(
+                    text = stringResource(R.string.songs_filter_none),
+                    actionText = stringResource(R.string.songs_filter_clear),
+                    onAction = { onQueryChange("") },
+                    live = true,
+                )
+            }
         }
         if (shown.size >= 2) {
-            Text(
-                pluralStringResource(R.plurals.song_count, shown.size, shown.size),
-                style = MaterialTheme.typography.titleMedium,
-            )
-            BigButton(stringResource(R.string.play_all), { onPlayAll(shown) }, icon = Icons.Filled.PlayArrow)
+            item(key = "count") {
+                Text(
+                    pluralStringResource(R.plurals.song_count, shown.size, shown.size),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+            }
+            item(key = "play-all") {
+                BigButton(stringResource(R.string.play_all), { onPlayAll(shown) }, icon = Icons.Filled.PlayArrow)
+            }
         }
-        shown.forEachIndexed { index, song ->
+        itemsIndexed(shown, key = { _, song -> song.id }) { index, song ->
             SongCard(
                 song = song,
                 onPlay = { onPlay(index) },
@@ -139,6 +159,12 @@ private fun SongsFilter(query: String, onQueryChange: (String) -> Unit, onMic: (
             modifier = Modifier
                 .weight(1f)
                 .heightIn(min = 72.dp),
+            shape = RoundedCornerShape(20.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = Color.White,
+                unfocusedContainerColor = Color.White,
+                unfocusedBorderColor = FieldOutline,
+            ),
             textStyle = MaterialTheme.typography.titleMedium,
             label = { Text(stringResource(R.string.songs_filter_label), style = MaterialTheme.typography.bodyLarge) },
             placeholder = { Text(stringResource(R.string.songs_filter_hint), style = MaterialTheme.typography.bodyLarge) },
@@ -166,38 +192,39 @@ private fun SongCard(song: Song, onPlay: () -> Unit, onDelete: () -> Unit) {
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Artwork(url = song.thumbnailUrl, size = 72.dp, decorative = true)
+            Artwork(url = song.thumbnailUrl, size = 80.dp, decorative = true, corner = 18.dp)
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     song.title,
                     style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
                     maxLines = 3,
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
                     song.artist,
                     style = MaterialTheme.typography.bodyLarge,
+                    color = InkSoft,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
         }
-        PrimaryWithSecondary(
-            primary = {
-                BigButton(
-                    stringResource(R.string.play),
-                    onPlay,
-                    icon = Icons.Filled.PlayArrow,
-                    description = stringResource(R.string.song_play_desc, song.title),
-                )
-            },
-            secondary = {
-                DangerOutlineButton(
-                    stringResource(R.string.delete),
-                    onDelete,
-                    description = stringResource(R.string.delete_song_desc, song.title),
-                )
-            },
+        // Who the song is above, what you can do with it below.
+        HorizontalDivider(thickness = 1.dp, color = CardDivider)
+        BigButton(
+            stringResource(R.string.play),
+            onPlay,
+            icon = Icons.Filled.PlayArrow,
+            minHeight = MinTouch,
+            description = stringResource(R.string.song_play_desc, song.title),
         )
+        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
+            DangerTextButton(
+                stringResource(R.string.delete),
+                onDelete,
+                description = stringResource(R.string.delete_song_desc, song.title),
+            )
+        }
     }
 }
